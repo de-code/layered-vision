@@ -1,0 +1,4 @@
+include layered_vision
+include requirements.txt
+prune tests
+prune .*
