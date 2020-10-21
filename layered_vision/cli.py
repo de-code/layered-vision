@@ -4,6 +4,9 @@ from abc import ABC, abstractmethod
 from typing import Dict, List
 
 
+from layered_vision.app import LayeredVisionApp
+
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -35,9 +38,15 @@ class StartSubCommand(SubCommand):
 
     def add_arguments(self, parser: argparse.ArgumentParser):
         add_common_arguments(parser)
+        parser.add_argument(
+            "--config-file",
+            default="config.yml",
+            help="The path to the config file"
+        )
 
     def run(self, args: argparse.Namespace):  # pylint: disable=unused-argument
-        LOGGER.info('start (not implemented yet')
+        with LayeredVisionApp(config_path=args.config_file) as app:
+            app.run()
 
 
 SUB_COMMANDS: List[SubCommand] = [

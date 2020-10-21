@@ -1,0 +1,8 @@
+layers:
+  - id: in
+    input_path: "https://github.com/numpy/numpy/raw/master/branding/logo/logomark/numpylogoicon.png"
+    width: 480
+    height: 300
+    repeat: true
+  - id: out
+    output_path: window
