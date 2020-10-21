@@ -1,0 +1,7 @@
+layers:
+  - id: in
+    input_path: "https://github.com/numpy/numpy/raw/master/branding/logo/logomark/numpylogoicon.png"
+  - id: out1
+    output_path: "data/numpy-logo1.png"
+  - id: out2
+    output_path: "data/numpy-logo2.png"
