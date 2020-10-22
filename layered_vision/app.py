@@ -1,6 +1,6 @@
 import logging
 from contextlib import ExitStack
-from typing import List
+from typing import ContextManager, Iterable, List
 
 from .utils.timer import LoggingTimer
 from .utils.image import (
@@ -27,6 +27,24 @@ class RuntimeContext:
     ):
         self.timer = timer
         self.frame_cache = {}
+
+
+def get_image_source_for_layer_config(
+    layer_config: LayerConfig
+) -> ContextManager[Iterable[ImageArray]]:
+    width = layer_config.get('width')
+    height = layer_config.get('height')
+    if width and height:
+        image_size = ImageSize(width=width, height=height)
+    else:
+        image_size = None
+    return get_image_source_for_path(
+        layer_config.get('input_path'),
+        image_size=image_size,
+        repeat=layer_config.get('repeat'),
+        fps=layer_config.get('fps'),
+        fourcc=layer_config.get('fourcc')
+    )
 
 
 class RuntimeLayer:
@@ -63,19 +81,8 @@ class RuntimeLayer:
         if not self.is_input_layer:
             raise RuntimeError('not an input layer: %r' % self)
         if self.image_iterator is None:
-            width = self.layer_config.get('width')
-            height = self.layer_config.get('height')
-            if width and height:
-                image_size = ImageSize(width=width, height=height)
-            else:
-                image_size = None
             self.image_iterator = iter(self.exit_stack.enter_context(
-                get_image_source_for_path(
-                    self.layer_config.get('input_path'),
-                    image_size=image_size,
-                    repeat=self.layer_config.get('repeat'),
-                    fps=self.layer_config.get('fps')
-                )
+                get_image_source_for_layer_config(self.layer_config)
             ))
         return self.image_iterator
 

@@ -1,0 +1,9 @@
+layers:
+  - id: in
+    input_path: "/dev/video0"
+    width: 480
+    height: 300
+    fourcc: "MJPG"
+    repeat: true
+  - id: out
+    output_path: window
