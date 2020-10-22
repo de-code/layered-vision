@@ -1,6 +1,5 @@
 import logging
 from contextlib import ExitStack
-from itertools import cycle
 from typing import List
 
 from .utils.timer import LoggingTimer
@@ -73,11 +72,10 @@ class RuntimeLayer:
             self.image_iterator = iter(self.exit_stack.enter_context(
                 get_image_source_for_path(
                     self.layer_config.get('input_path'),
-                    image_size=image_size
+                    image_size=image_size,
+                    repeat=self.layer_config.get('repeat')
                 )
             ))
-            if self.layer_config.get('repeat'):
-                self.image_iterator = cycle(self.image_iterator)
         return self.image_iterator
 
     def get_output_sink(self) -> T_OutputSink:

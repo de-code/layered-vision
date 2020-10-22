@@ -16,7 +16,8 @@ def iter_read_video_images(
     video_capture: cv2.VideoCapture,
     image_size: ImageSize = None,
     interpolation: int = cv2.INTER_LINEAR,
-    fps: float = None
+    fps: float = None,
+    repeat: bool = None
 ) -> Iterable[np.ndarray]:
     is_first = True
     desired_frame_time = 1 / fps if fps else 0
@@ -25,7 +26,13 @@ def iter_read_video_images(
         grabbed, image_array = video_capture.read()
         if not grabbed:
             LOGGER.info('video end reached')
-            return
+            if not repeat:
+                return
+            video_capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            grabbed, image_array = video_capture.read()
+            if not grabbed:
+                LOGGER.info('unable to rewind video')
+                return
         LOGGER.debug('video image_array.shape: %s', image_array.shape)
         if is_first:
             LOGGER.info(
@@ -53,7 +60,8 @@ def iter_read_video_images(
 @contextmanager
 def get_video_image_source(
     path: str,
-    image_size: ImageSize = None
+    image_size: ImageSize = None,
+    repeat: bool = None
 ) -> ContextManager[Iterable[np.ndarray]]:
     LOGGER.info('loading video: %r', path)
     video_capture = cv2.VideoCapture(path)
@@ -67,7 +75,12 @@ def get_video_image_source(
         actual_image_size, actual_fps
     )
     try:
-        yield iter_read_video_images(video_capture, image_size=image_size, fps=actual_fps)
+        yield iter_read_video_images(
+            video_capture,
+            image_size=image_size,
+            fps=actual_fps,
+            repeat=repeat
+        )
     finally:
         LOGGER.debug('releasing video capture: %s', path)
         video_capture.release()

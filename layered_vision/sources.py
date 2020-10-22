@@ -1,6 +1,7 @@
 import logging
 import os
 from contextlib import contextmanager
+from itertools import cycle
 from typing import ContextManager, Iterable
 
 import cv2
@@ -20,6 +21,7 @@ T_ImageSource = ContextManager[Iterable[ImageArray]]
 def get_simple_image_source(
     path: str,
     image_size: ImageSize = None,
+    repeat: bool = None,
     **_
 ) -> T_ImageSource:
     local_image_path = get_file(path)
@@ -30,7 +32,10 @@ def get_simple_image_source(
     image_array = bgr_to_rgb(bgr_image_array)
     if image_size is not None:
         image_array = resize_image_to(image_array, image_size)
-    yield [image_array]
+    image_array_iterable = [image_array]
+    if repeat:
+        image_array_iterable = cycle(image_array_iterable)
+    yield image_array_iterable
 
 
 def is_video_path(path: str) -> bool:
@@ -41,5 +46,5 @@ def is_video_path(path: str) -> bool:
 
 def get_image_source_for_path(path: str, **kwargs) -> T_ImageSource:
     if is_video_path(path):
-        return get_video_image_source(path)
+        return get_video_image_source(path, **kwargs)
     return get_simple_image_source(path, **kwargs)
