@@ -1,14 +1,54 @@
 import logging
-# from contextlib import contextmanager
-# from typing import ContextManager, Iterable
+from contextlib import contextmanager
+from typing import ContextManager, Iterable
 
 import cv2
 import numpy as np
 
-from .image import ImageArray, rgb_to_bgr
+from .image import ImageArray, ImageSize, rgb_to_bgr, bgr_to_rgb, get_image_size
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+def iter_read_video_images(
+    video_capture: cv2.VideoCapture,
+    image_size: ImageSize = None,
+    interpolation: int = cv2.INTER_LINEAR
+) -> Iterable[np.ndarray]:
+    is_first = True
+    while True:
+        grabbed, image_array = video_capture.read()
+        if not grabbed:
+            LOGGER.info('video end reached')
+            return
+        LOGGER.debug('video image_array.shape: %s', image_array.shape)
+        if is_first:
+            LOGGER.info(
+                'received video image shape: %s (requested: %s)',
+                image_array.shape, image_size
+            )
+        if image_size and get_image_size(image_array) != image_size:
+            image_array = cv2.resize(
+                image_array,
+                (image_size.width, image_size.height),
+                interpolation=interpolation
+            )
+        yield bgr_to_rgb(image_array)
+        is_first = False
+
+
+@contextmanager
+def get_video_image_source(
+    path: str,
+    image_size: ImageSize = None
+) -> ContextManager[Iterable[np.ndarray]]:
+    video_capture = cv2.VideoCapture(path)
+    try:
+        yield iter_read_video_images(video_capture, image_size=image_size)
+    finally:
+        LOGGER.debug('releasing video capture: %s', path)
+        video_capture.release()
 
 
 class ShowImageSink:

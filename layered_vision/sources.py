@@ -1,11 +1,13 @@
 import logging
+import os
 from contextlib import contextmanager
 from typing import ContextManager, Iterable
 
 import cv2
 
 from .utils.image import resize_image_to, ImageSize, ImageArray, bgr_to_rgb
-from .utils.io import get_file
+from .utils.io import get_file, strip_url_suffix
+from .utils.opencv import get_video_image_source
 
 
 LOGGER = logging.getLogger(__name__)
@@ -31,5 +33,13 @@ def get_simple_image_source(
     yield [image_array]
 
 
+def is_video_path(path: str) -> bool:
+    ext = os.path.splitext(os.path.basename(strip_url_suffix(path)))[-1]
+    LOGGER.debug('ext: %s', ext)
+    return ext.lower() in {'.webm', '.mkv', '.mp4'}
+
+
 def get_image_source_for_path(path: str, **kwargs) -> T_ImageSource:
+    if is_video_path(path):
+        return get_video_image_source(path)
     return get_simple_image_source(path, **kwargs)

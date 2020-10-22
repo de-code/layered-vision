@@ -1,0 +1,8 @@
+layers:
+  - id: in
+    input_path: "https://www.dropbox.com/s/rykevstxg64caag/video-of-a-man-laughing-and-happy-1608393-sd.mp4?dl=1"
+    width: 480
+    height: 300
+    repeat: true
+  - id: out
+    output_path: window
