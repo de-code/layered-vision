@@ -65,6 +65,10 @@ def get_video_image_source(
 ) -> ContextManager[Iterable[np.ndarray]]:
     LOGGER.info('loading video: %r', path)
     video_capture = cv2.VideoCapture(path)
+    if image_size:
+        LOGGER.info('attempting to set vide image size to: %s', image_size)
+        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, image_size.width)
+        video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, image_size.height)
     actual_image_size = ImageSize(
         width=video_capture.get(cv2.CAP_PROP_FRAME_WIDTH),
         height=video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
