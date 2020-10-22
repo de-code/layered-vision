@@ -22,11 +22,22 @@ def get_file_to(
     return local_file
 
 
+def strip_url_suffix(path: str) -> str:
+    qs_index = path.find('?')
+    if qs_index > 0:
+        return path[:qs_index]
+    return path
+
+
 def get_file(file_path: str) -> str:
     if os.path.exists(file_path):
         return file_path
     local_path = get_file_to(
         file_path,
-        md5(file_path.encode('utf-8')).hexdigest() + '-' + os.path.basename(file_path)
+        (
+            md5(file_path.encode('utf-8')).hexdigest()
+            + '-'
+            + os.path.basename(strip_url_suffix(file_path))
+        )
     )
     return local_path
