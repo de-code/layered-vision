@@ -4,9 +4,6 @@ layers:
     input_path: "https://www.dropbox.com/s/rykevstxg64caag/video-of-a-man-laughing-and-happy-1608393-sd.mp4?dl=1"
     width: 480
     height: 300
-    # remove fps to use fps provided by video file
-    # fps "0" means no target fps, load the video as fast as possible
-    fps: 0
     repeat: true
   - id: out
-    output_path: window
+    output_path: "/dev/video2"
