@@ -61,7 +61,9 @@ def iter_read_video_images(
 def get_video_image_source(
     path: str,
     image_size: ImageSize = None,
-    repeat: bool = None
+    repeat: bool = None,
+    fps: float = None,
+    **_
 ) -> ContextManager[Iterable[np.ndarray]]:
     LOGGER.info('loading video: %r', path)
     video_capture = cv2.VideoCapture(path)
@@ -69,6 +71,9 @@ def get_video_image_source(
         LOGGER.info('attempting to set vide image size to: %s', image_size)
         video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, image_size.width)
         video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, image_size.height)
+    if fps:
+        LOGGER.info('attempting to set vide fps to %r', fps)
+        video_capture.set(cv2.CAP_PROP_FPS, fps)
     actual_image_size = ImageSize(
         width=video_capture.get(cv2.CAP_PROP_FRAME_WIDTH),
         height=video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -82,7 +87,7 @@ def get_video_image_source(
         yield iter_read_video_images(
             video_capture,
             image_size=image_size,
-            fps=actual_fps,
+            fps=fps if fps is not None else actual_fps,
             repeat=repeat
         )
     finally:

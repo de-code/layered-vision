@@ -73,7 +73,8 @@ class RuntimeLayer:
                 get_image_source_for_path(
                     self.layer_config.get('input_path'),
                     image_size=image_size,
-                    repeat=self.layer_config.get('repeat')
+                    repeat=self.layer_config.get('repeat'),
+                    fps=self.layer_config.get('fps')
                 )
             ))
         return self.image_iterator
