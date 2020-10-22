@@ -12,6 +12,9 @@ from .image import ImageArray, ImageSize, rgb_to_bgr, bgr_to_rgb, get_image_size
 LOGGER = logging.getLogger(__name__)
 
 
+DEFAULT_WEBCAM_FOURCC = 'MJPG'
+
+
 def iter_read_video_images(
     video_capture: cv2.VideoCapture,
     image_size: ImageSize = None,
@@ -63,10 +66,14 @@ def get_video_image_source(
     image_size: ImageSize = None,
     repeat: bool = None,
     fps: float = None,
+    fourcc: str = None,
     **_
 ) -> ContextManager[Iterable[ImageArray]]:
     LOGGER.info('loading video: %r', path)
     video_capture = cv2.VideoCapture(path)
+    if fourcc:
+        LOGGER.info('setting video fourcc to %r', fourcc)
+        video_capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*fourcc))
     if image_size:
         LOGGER.info('attempting to set video image size to: %s', image_size)
         video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, image_size.width)
@@ -95,8 +102,14 @@ def get_video_image_source(
         video_capture.release()
 
 
-def get_webcam_image_source(*args, **kwargs) -> ContextManager[Iterable[ImageArray]]:
-    return get_video_image_source(*args, **kwargs)
+def get_webcam_image_source(
+    *args,
+    fourcc: str = None,
+    **kwargs
+) -> ContextManager[Iterable[ImageArray]]:
+    if fourcc is None:
+        fourcc = DEFAULT_WEBCAM_FOURCC
+    return get_video_image_source(*args, fourcc=fourcc, **kwargs)
 
 
 class ShowImageSink:

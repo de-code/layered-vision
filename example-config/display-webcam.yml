@@ -3,9 +3,7 @@ layers:
     input_path: "/dev/video0"
     width: 480
     height: 300
-    # remove fps to use fps provided by video file
-    # fps "0" means no target fps, load the video as fast as possible
-    fps: 0
+    fourcc: "MJPG"
     repeat: true
   - id: out
     output_path: window
