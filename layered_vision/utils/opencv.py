@@ -1,6 +1,7 @@
 import logging
-from time import time, sleep
 from contextlib import contextmanager
+from itertools import cycle
+from time import time, sleep
 from typing import ContextManager, Iterable
 
 import cv2
@@ -15,16 +16,10 @@ LOGGER = logging.getLogger(__name__)
 DEFAULT_WEBCAM_FOURCC = 'MJPG'
 
 
-def iter_read_video_images(
+def iter_read_raw_video_images(
     video_capture: cv2.VideoCapture,
-    image_size: ImageSize = None,
-    interpolation: int = cv2.INTER_LINEAR,
-    fps: float = None,
-    repeat: bool = None
-) -> Iterable[np.ndarray]:
-    is_first = True
-    desired_frame_time = 1 / fps if fps else 0
-    last_frame_time = None
+    repeat: bool = False
+) -> Iterable[ImageArray]:
     while True:
         grabbed, image_array = video_capture.read()
         if not grabbed:
@@ -36,19 +31,48 @@ def iter_read_video_images(
             if not grabbed:
                 LOGGER.info('unable to rewind video')
                 return
+        yield image_array
+
+
+def iter_resize_video_images(
+    video_images: Iterable[ImageArray],
+    image_size: ImageSize = None,
+    interpolation: int = cv2.INTER_LINEAR
+) -> Iterable[ImageArray]:
+    is_first = True
+    for image_array in video_images:
         LOGGER.debug('video image_array.shape: %s', image_array.shape)
         if is_first:
             LOGGER.info(
                 'received video image shape: %s (requested: %s)',
                 image_array.shape, image_size
             )
+            is_first = False
         if image_size and get_image_size(image_array) != image_size:
             image_array = cv2.resize(
                 image_array,
                 (image_size.width, image_size.height),
                 interpolation=interpolation
             )
-        rgb_image_array = bgr_to_rgb(image_array)
+        yield image_array
+
+
+def iter_convert_video_images_to_rgb(
+    video_images: Iterable[ImageArray]
+) -> Iterable[ImageArray]:
+    return (bgr_to_rgb(image_array) for image_array in video_images)
+
+
+def iter_delay_video_images_to_fps(
+    video_images: Iterable[ImageArray],
+    fps: float = None
+) -> Iterable[np.ndarray]:
+    if not fps or fps <= 0:
+        yield from video_images
+        return
+    desired_frame_time = 1 / fps
+    last_frame_time = None
+    for image_array in video_images:
         current_time = time()
         if last_frame_time:
             desired_wait_time = desired_frame_time - (current_time - last_frame_time)
@@ -56,15 +80,41 @@ def iter_read_video_images(
                 LOGGER.debug('sleeping for desired fps: %s', desired_wait_time)
                 sleep(desired_wait_time)
         last_frame_time = time()
-        yield rgb_image_array
-        is_first = False
+        yield image_array
+
+
+def iter_read_video_images(
+    video_capture: cv2.VideoCapture,
+    image_size: ImageSize = None,
+    interpolation: int = cv2.INTER_LINEAR,
+    repeat: bool = False,
+    preload: bool = False,
+    fps: float = None
+) -> Iterable[np.ndarray]:
+    if preload:
+        LOGGER.info('preloading video images')
+        preloaded_video_images = list(
+            iter_convert_video_images_to_rgb(iter_resize_video_images(
+                iter_read_raw_video_images(video_capture, repeat=False),
+                image_size=image_size, interpolation=interpolation
+            ))
+        )
+        if repeat:
+            video_images = cycle(preloaded_video_images)
+    else:
+        video_images = iter_convert_video_images_to_rgb(iter_resize_video_images(
+            iter_read_raw_video_images(video_capture, repeat=repeat),
+            image_size=image_size, interpolation=interpolation
+        ))
+    return iter_delay_video_images_to_fps(video_images, fps)
 
 
 @contextmanager
 def get_video_image_source(
     path: str,
     image_size: ImageSize = None,
-    repeat: bool = None,
+    repeat: bool = False,
+    preload: bool = False,
     fps: float = None,
     fourcc: str = None,
     **_
@@ -94,8 +144,9 @@ def get_video_image_source(
         yield iter_read_video_images(
             video_capture,
             image_size=image_size,
+            repeat=repeat,
+            preload=preload,
             fps=fps if fps is not None else actual_fps,
-            repeat=repeat
         )
     finally:
         LOGGER.debug('releasing video capture: %s', path)
