@@ -8,5 +8,6 @@ layers:
     # fps "0" means no target fps, load the video as fast as possible
     fps: 0
     repeat: true
+    preload: true
   - id: out
     output_path: window

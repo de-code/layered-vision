@@ -44,6 +44,7 @@ def get_image_source_for_layer_config(
         layer_config.get('input_path'),
         image_size=image_size,
         repeat=layer_config.get('repeat'),
+        preload=layer_config.get('preload'),
         fps=layer_config.get('fps'),
         fourcc=layer_config.get('fourcc')
     )
