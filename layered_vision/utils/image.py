@@ -41,3 +41,24 @@ def bgr_to_rgb(image: ImageArray) -> ImageArray:
 
 def rgb_to_bgr(image: ImageArray) -> ImageArray:
     return bgr_to_rgb(image)
+
+
+def get_image_with_alpha(image: ImageArray, alpha: ImageArray) -> ImageArray:
+    color_channels = image.shape[-1]
+    if color_channels == 3:
+        if len(alpha.shape) == 2:
+            alpha = np.expand_dims(alpha, -1)
+        return np.concatenate(
+            (image, alpha),
+            axis=-1
+        )
+    raise ValueError('unsupported image')
+
+
+def apply_alpha(image: ImageArray) -> ImageArray:
+    color_channels = image.shape[-1]
+    if color_channels == 3:
+        return image
+    if color_channels == 4:
+        return image[:, :, :3] * (image[:, :, 3:] / 255)
+    raise ValueError('unsupported image')

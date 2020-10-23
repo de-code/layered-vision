@@ -5,7 +5,8 @@ from typing import ContextManager, Iterable, List
 from .utils.timer import LoggingTimer
 from .utils.image import (
     ImageArray,
-    ImageSize
+    ImageSize,
+    apply_alpha
 )
 
 from .sinks import (
@@ -15,6 +16,7 @@ from .sinks import (
 
 from .config import load_config, LayerConfig
 from .sources import get_image_source_for_path, T_ImageSource
+from .filters import LayerFilter, create_filter
 
 
 LOGGER = logging.getLogger(__name__)
@@ -63,6 +65,7 @@ class RuntimeLayer:
         self.source_layers = (source_layers or []).copy()
         self.image_iterator = None
         self.output_sink = None
+        self.filter = None
         self.context = context
 
     def __enter__(self):
@@ -95,7 +98,21 @@ class RuntimeLayer:
             )
         return self.output_sink
 
+    def get_filter(self) -> LayerFilter:
+        if self.filter is not None:
+            return self.filter
+        if not self.is_filter_layer:
+            raise RuntimeError('not an output layer')
+        self.filter = create_filter(
+            self.layer_config
+        )
+        return self.filter
+
     def __next__(self):
+        if self.is_filter_layer:
+            source_data = next(self.source_layers[0])
+            self.context.timer.on_step_start(self.layer_id)
+            return self.get_filter().filter(source_data)
         self.context.timer.on_step_start(self.layer_id)
         image_array = self.context.frame_cache.get(self.layer_id)
         if image_array is None:
@@ -104,6 +121,7 @@ class RuntimeLayer:
         return image_array
 
     def write(self, image_array: ImageArray):
+        image_array = apply_alpha(image_array)
         LOGGER.debug('output shape: %s', image_array.shape)
         self.get_output_sink()(image_array)
 
@@ -114,6 +132,10 @@ class RuntimeLayer:
     @property
     def is_input_layer(self) -> bool:
         return bool(self.layer_config.props.get('input_path'))
+
+    @property
+    def is_filter_layer(self) -> bool:
+        return bool(self.layer_config.props.get('filter'))
 
     def add_source_layer(self, source_layer: 'RuntimeLayer'):
         self.source_layers.append(source_layer)
