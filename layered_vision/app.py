@@ -23,6 +23,10 @@ from .filters import LayerFilter, create_filter
 LOGGER = logging.getLogger(__name__)
 
 
+class LayerException(RuntimeError):
+    pass
+
+
 class RuntimeContext:
     def __init__(
         self,
@@ -201,10 +205,10 @@ class RuntimeLayer:
                 image_array = next(self.get_image_iterator())
                 self.context.frame_cache[self.layer_id] = image_array
             return image_array
-        except StopIteration:
+        except (StopIteration, LayerException):
             raise
         except Exception as exc:
-            raise RuntimeError('failed to process layer %r due to %r' % (
+            raise LayerException('failed to process layer %r due to %r' % (
                 self.layer_id, exc
             )) from exc
 
