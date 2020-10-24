@@ -1,5 +1,7 @@
 import logging
 from collections import namedtuple
+from functools import reduce
+from typing import List
 
 import cv2
 import numpy as np
@@ -62,3 +64,27 @@ def apply_alpha(image: ImageArray) -> ImageArray:
     if color_channels == 4:
         return image[:, :, :3] * (image[:, :, 3:] / 255)
     raise ValueError('unsupported image')
+
+
+def combine_two_images(image1: ImageArray, image2: ImageArray) -> ImageArray:
+    image1_size = get_image_size(image1)
+    image2_size = get_image_size(image2)
+    if image1_size != image2_size:
+        raise ValueError('image size mismatch: %s != %s' % (image1_size, image2_size))
+    image1_color_channels = image1.shape[-1]
+    image2_color_channels = image2.shape[-1]
+    if image2_color_channels <= 3:
+        # image2 fully opaque
+        return image2
+    if image1_color_channels == 3:
+        # no output alpha
+        image2_alpha = image2[:, :, 3:] / 255
+        return image1 * (1 - image2_alpha) + image2[:, :, :3] * image2_alpha
+    raise ValueError('unsupported image')
+
+
+def combine_images(images: List[ImageArray]) -> ImageArray:
+    return reduce(
+        combine_two_images,
+        images
+    )

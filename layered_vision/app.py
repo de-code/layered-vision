@@ -6,7 +6,8 @@ from .utils.timer import LoggingTimer
 from .utils.image import (
     ImageArray,
     ImageSize,
-    apply_alpha
+    apply_alpha,
+    combine_images
 )
 
 from .sinks import (
@@ -50,6 +51,75 @@ def get_image_source_for_layer_config(
     )
 
 
+class RuntimeBranch:
+    def __init__(self, runtime_layers: List['RuntimeLayer']):
+        self.runtime_layers = runtime_layers
+
+    @staticmethod
+    def from_config(
+        branch_config: dict,
+        branch_id: str,
+        context: RuntimeContext
+    ) -> 'RuntimeBranch':
+        layers_config = branch_config['layers']
+        return RuntimeBranch(runtime_layers=[
+            RuntimeLayer(
+                layer_index,
+                LayerConfig(layer_config_props),
+                layer_id=layer_config_props.get('id') or '%sl%d' % (branch_id, layer_index),
+                context=context
+            )
+            for layer_index, layer_config_props in enumerate(layers_config)
+        ])
+
+    def __next__(self):
+        return next(self.runtime_layers[-1])
+
+    def add_source_layer(self, source_layer: 'RuntimeLayer'):
+        if not self.runtime_layers:
+            return
+        self.runtime_layers[0].add_source_layer(source_layer)
+
+
+class RuntimeBranches:
+    def __init__(
+        self,
+        branches: List[RuntimeBranch],
+        layer_id: str,
+        context: RuntimeContext
+    ):
+        self.branches = branches
+        self.layer_id = layer_id
+        self.context = context
+
+    @staticmethod
+    def from_config(
+        branches_config: dict,
+        layer_id: str,
+        context: RuntimeContext
+    ) -> 'RuntimeBranch':
+        return RuntimeBranches([
+            RuntimeBranch.from_config(
+                branch_config,
+                branch_id='%sb%d' % (layer_id, branch_index),
+                context=context
+            )
+            for branch_index, branch_config in enumerate(branches_config)
+        ], layer_id=layer_id, context=context)
+
+    def __next__(self):
+        branch_images = list(reversed([
+            next(branch)
+            for branch in reversed(self.branches)
+        ]))
+        self.context.timer.on_step_start('%s.combine' % self.layer_id)
+        return combine_images(branch_images)
+
+    def add_source_layer(self, source_layer: 'RuntimeLayer'):
+        for branch in self.branches:
+            branch.add_source_layer(source_layer)
+
+
 class RuntimeLayer:
     def __init__(
         self,
@@ -68,6 +138,14 @@ class RuntimeLayer:
         self.output_sink = None
         self.filter = None
         self.context = context
+        self.branches = None
+        branches_config = layer_config.get('branches')
+        if branches_config:
+            self.branches = RuntimeBranches.from_config(
+                branches_config,
+                layer_id=layer_id,
+                context=context
+            )
 
     def __enter__(self):
         return self
@@ -110,16 +188,23 @@ class RuntimeLayer:
         return self.filter
 
     def __next__(self):
-        if self.is_filter_layer:
-            source_data = next(self.source_layers[0])
+        try:
+            if self.is_filter_layer:
+                source_data = next(self.source_layers[0])
+                self.context.timer.on_step_start(self.layer_id)
+                return self.get_filter().filter(source_data)
+            if self.branches:
+                return next(self.branches)
             self.context.timer.on_step_start(self.layer_id)
-            return self.get_filter().filter(source_data)
-        self.context.timer.on_step_start(self.layer_id)
-        image_array = self.context.frame_cache.get(self.layer_id)
-        if image_array is None:
-            image_array = next(self.get_image_iterator())
-            self.context.frame_cache[self.layer_id] = image_array
-        return image_array
+            image_array = self.context.frame_cache.get(self.layer_id)
+            if image_array is None:
+                image_array = next(self.get_image_iterator())
+                self.context.frame_cache[self.layer_id] = image_array
+            return image_array
+        except Exception as exc:
+            raise RuntimeError('failed to process layer %r due to %r' % (
+                self.layer_id, exc
+            )) from exc
 
     def write(self, image_array: ImageArray):
         image_array = apply_alpha(image_array)
@@ -140,6 +225,8 @@ class RuntimeLayer:
 
     def add_source_layer(self, source_layer: 'RuntimeLayer'):
         self.source_layers.append(source_layer)
+        if self.branches:
+            self.branches.add_source_layer(source_layer)
 
 
 def get_source_layer_index(
@@ -170,6 +257,12 @@ def add_source_layers_recursively(
             all_runtime_layers,
             source_layer
         )
+    if target_layer.branches:
+        for branch in target_layer.branches.branches:
+            add_source_layers_recursively(
+                branch.runtime_layers,
+                branch.runtime_layers[-1]
+            )
 
 
 class LayeredVisionApp:
