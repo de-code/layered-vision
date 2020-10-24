@@ -69,6 +69,7 @@ class RuntimeBranch:
         branch_id: str,
         context: RuntimeContext
     ) -> 'RuntimeBranch':
+        LOGGER.debug('branch_config: %s', branch_config)
         layers_config = branch_config['layers']
         return RuntimeBranch(runtime_layers=[
             RuntimeLayer(
@@ -106,6 +107,7 @@ class RuntimeBranches:
         layer_id: str,
         context: RuntimeContext
     ) -> 'RuntimeBranch':
+        LOGGER.debug('branches_config: %s', branches_config)
         return RuntimeBranches([
             RuntimeBranch.from_config(
                 branch_config,
