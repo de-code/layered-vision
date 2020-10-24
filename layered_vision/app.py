@@ -201,6 +201,8 @@ class RuntimeLayer:
                 image_array = next(self.get_image_iterator())
                 self.context.frame_cache[self.layer_id] = image_array
             return image_array
+        except StopIteration:
+            raise
         except Exception as exc:
             raise RuntimeError('failed to process layer %r due to %r' % (
                 self.layer_id, exc
