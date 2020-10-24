@@ -1,11 +1,12 @@
 import logging
 from contextlib import ExitStack
-from typing import ContextManager, Iterable, List
+from typing import ContextManager, Iterable, Optional, List
 
 from .utils.timer import LoggingTimer
 from .utils.image import (
     ImageArray,
     ImageSize,
+    get_image_size,
     apply_alpha,
     combine_images
 )
@@ -23,24 +24,31 @@ from .filters import LayerFilter, create_filter
 LOGGER = logging.getLogger(__name__)
 
 
+class LayerException(RuntimeError):
+    pass
+
+
 class RuntimeContext:
     def __init__(
         self,
-        timer: LoggingTimer
+        timer: LoggingTimer,
+        preferred_image_size: ImageSize = None
     ):
         self.timer = timer
+        self.preferred_image_size = preferred_image_size
         self.frame_cache = {}
 
 
 def get_image_source_for_layer_config(
-    layer_config: LayerConfig
+    layer_config: LayerConfig,
+    preferred_image_size: Optional[ImageSize]
 ) -> ContextManager[Iterable[ImageArray]]:
     width = layer_config.get('width')
     height = layer_config.get('height')
     if width and height:
         image_size = ImageSize(width=width, height=height)
     else:
-        image_size = None
+        image_size = preferred_image_size
     return get_image_source_for_path(
         layer_config.get('input_path'),
         image_size=image_size,
@@ -164,7 +172,10 @@ class RuntimeLayer:
             raise RuntimeError('not an input layer: %r' % self)
         if self.image_iterator is None:
             self.image_iterator = iter(self.exit_stack.enter_context(
-                get_image_source_for_layer_config(self.layer_config)
+                get_image_source_for_layer_config(
+                    self.layer_config,
+                    preferred_image_size=self.context.preferred_image_size
+                )
             ))
         return self.image_iterator
 
@@ -200,11 +211,15 @@ class RuntimeLayer:
             if image_array is None:
                 image_array = next(self.get_image_iterator())
                 self.context.frame_cache[self.layer_id] = image_array
+            if self.context.preferred_image_size is None:
+                image_size = get_image_size(image_array)
+                LOGGER.info('setting preferred image size to: %s', image_size)
+                self.context.preferred_image_size = image_size
             return image_array
-        except StopIteration:
+        except (StopIteration, LayerException):
             raise
         except Exception as exc:
-            raise RuntimeError('failed to process layer %r due to %r' % (
+            raise LayerException('failed to process layer %r due to %r' % (
                 self.layer_id, exc
             )) from exc
 
