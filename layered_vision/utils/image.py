@@ -63,7 +63,7 @@ def apply_alpha(image: ImageArray) -> ImageArray:
         return image
     if color_channels == 4:
         return image[:, :, :3] * (image[:, :, 3:] / 255)
-    raise ValueError('unsupported image')
+    raise ValueError('unsupported image, shape=%s' % image.shape)
 
 
 def combine_two_images(image1: ImageArray, image2: ImageArray) -> ImageArray:
