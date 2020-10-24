@@ -1,0 +1,23 @@
+layers:
+  - id: in
+    # Source: https://www.pexels.com/video/a-woman-practicing-her-presentation-skill-through-words-and-hand-gestures-3649122/
+    input_path: "https://www.dropbox.com/s/k9pg4qkysrkq2t8/a-woman-practicing-her-presentation-skill-through-words-and-hand-gestures-3649122-360p.mp4?dl=1"
+    repeat: true
+    preload: true
+  - id: branches
+    branches:
+    - layers:
+      - id: bg
+        # Source: https://www.pexels.com/video/carnival-rides-operating-in-an-amusement-park-3031943/
+        input_path: "https://www.dropbox.com/s/oqftndbs29g8ekd/carnival-rides-operating-in-an-amusement-park-3031943-360p.mp4?dl=1"
+        repeat: true
+        preload: true
+    - layers:
+      - id: chroma_key
+        filter: chroma_key
+        red: 32
+        green: 192
+        blue: 24
+        threshold: 50
+  - id: out
+    output_path: window
