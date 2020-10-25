@@ -1,0 +1,34 @@
+layers:
+  - id: in
+    input_path: "/dev/video0"
+    fourcc: "MJPG"
+  - id: branches
+    branches:
+    - layers:
+      - id: bg
+        # Source: https://www.pexels.com/video/carnival-rides-operating-in-an-amusement-park-3031943/
+        input_path: "https://www.dropbox.com/s/oqftndbs29g8ekd/carnival-rides-operating-in-an-amusement-park-3031943-360p.mp4?dl=1"
+        repeat: true
+        preload: true
+    - layers:
+      - id: bodypix
+        filter: bodypix
+        model_path: "https://storage.googleapis.com/tfjs-models/savedmodel/bodypix/mobilenet/float/050/model-stride16.json"
+        # model_path: "https://storage.googleapis.com/tfjs-models/savedmodel/bodypix/resnet50/float/model-stride16.json"
+        internal_resolution: 0.5
+        threshold: 0.5
+      - id: erode
+        filter: erode
+        channel: alpha
+        value: 20
+      - id: dilate
+        filter: dilate
+        channel: alpha
+        value: 19
+      - id: blur
+        filter: box_blur
+        channel: alpha
+        value: 10
+  - id: out
+    # Note: change to the v4l2loopback device
+    output_path: "/dev/video2"
