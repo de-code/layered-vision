@@ -31,5 +31,10 @@ layers:
         filter: box_blur
         channel: alpha
         value: 10
+      - id: motion_blur
+        filter: motion_blur
+        channel: alpha
+        frame_count: 3
+        decay: 0
   - id: out
     output_path: window
