@@ -154,12 +154,43 @@ class DilateFilter(AbstractOptionalChannelFilter):
         return dilate_image(image_array, int(self.layer_config.get('value')))
 
 
+class MotionBlur(AbstractOptionalChannelFilter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.frame_count = int(self.layer_config.get('frame_count') or 0)
+        self.decay = float(self.layer_config.get('decay') or 0)
+        self._frames = []
+
+    def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
+        if self.frame_count < 2:
+            return image_array
+        self._frames.append(image_array)
+        if len(self._frames) > self.frame_count:
+            self._frames.pop(0)
+        if len(self._frames) <= 1:
+            return image_array
+        if self.decay <= 0:
+            return np.mean(self._frames, axis=0)
+        decayed_frames = [self._frames[-1]]
+        residue_total = 1
+        current_residue = 1
+        for frame in reversed(self._frames[:-1]):
+            current_residue *= (1.0 - self.decay)
+            residue_total += current_residue
+            decayed_frames.append(frame * current_residue)
+        output = np.sum(decayed_frames, axis=0)
+        np.divide(output, residue_total, out=output)
+        np.clip(output, 0, 255, out=output)
+        return output
+
+
 FILTER_CLASS_BY_NAME_MAP = {
     'bodypix': BodyPixFilter,
     'chroma_key': ChromaKeyFilter,
     'box_blur': BoxBlurFilter,
     'erode': ErodeFilter,
-    'dilate': DilateFilter
+    'dilate': DilateFilter,
+    'motion_blur': MotionBlur
 }
 
 
