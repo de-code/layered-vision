@@ -19,6 +19,7 @@ layers:
         # model_path: "https://storage.googleapis.com/tfjs-models/savedmodel/bodypix/resnet50/float/model-stride16.json"
         internal_resolution: 0.5
         threshold: 0.5
+        cache_model_result_secs: 0
       - id: erode
         filter: erode
         channel: alpha
