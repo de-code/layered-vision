@@ -7,7 +7,13 @@ import tensorflow as tf
 from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
 from tf_bodypix.model import BodyPixModelWrapper
 
-from .utils.image import ImageArray, get_image_with_alpha, box_blur_image
+from .utils.image import (
+    ImageArray,
+    get_image_with_alpha,
+    box_blur_image,
+    erode_image,
+    dilate_image
+)
 from .config import LayerConfig
 
 
@@ -138,10 +144,22 @@ class BoxBlurFilter(AbstractOptionalChannelFilter):
         return box_blur_image(image_array, int(self.layer_config.get('value')))
 
 
+class ErodeFilter(AbstractOptionalChannelFilter):
+    def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
+        return erode_image(image_array, int(self.layer_config.get('value')))
+
+
+class DilateFilter(AbstractOptionalChannelFilter):
+    def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
+        return dilate_image(image_array, int(self.layer_config.get('value')))
+
+
 FILTER_CLASS_BY_NAME_MAP = {
     'bodypix': BodyPixFilter,
     'chroma_key': ChromaKeyFilter,
     'box_blur': BoxBlurFilter,
+    'erode': ErodeFilter,
+    'dilate': DilateFilter
 }
 
 

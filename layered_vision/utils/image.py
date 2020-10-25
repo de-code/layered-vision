@@ -48,6 +48,16 @@ def box_blur_image(image: ImageArray, blur_size: int) -> ImageArray:
     return result
 
 
+def dilate_image(image: ImageArray, size: int) -> ImageArray:
+    kernel = np.ones((size, size), dtype=np.uint8)
+    return cv2.dilate(image, kernel, iterations=None)
+
+
+def erode_image(image: ImageArray, size: int) -> ImageArray:
+    kernel = np.ones((size, size), dtype=np.uint8)
+    return cv2.erode(image, kernel, iterations=None)
+
+
 def bgr_to_rgb(image: ImageArray) -> ImageArray:
     # see https://www.scivision.dev/numpy-image-bgr-to-rgb/
     return image[..., ::-1]
