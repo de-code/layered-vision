@@ -2,9 +2,17 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+Goals of this project is:
+
+* A tool to allow the composition of images or videos via a configuration file (e.g. as a virtual webcam).
+
+This project is still very much experimental and may change significantly.
+
 ## Install
 
-TODO
+```bash
+pip install layered-vision
+```
 
 ## Configuration
 
@@ -53,6 +61,43 @@ layers:
   - id: out
     output_path: window
 ```
+
+### Input Layer
+
+A layer that has an `input_path` property.
+
+The following inputs are currently supported:
+
+* Image
+* Video
+* Linux Webcam (`/dev/videoN`)
+
+The `input_path` may point to a remote location (as is the case with all examples). In that case it will be downloaded and cached locally.
+
+### Filter Layer
+
+A layer that has an `filter` property.
+
+The following filters are currently supported:
+
+| name | description |
+| -----| ----------- |
+| `box_blur` | Blurs the image or channel. |
+| `bodypix` | Uses the [bodypix](https://github.com/de-code/python-tf-bodypix) model to mask a person. |
+| `chroma_key` | Uses a chroma key (colour) to add a mask |
+| `dilate` | Dilates the image or channel. For example to increase the alpha mask after using `erode` |
+| `erode` | Erodes the image or channel. That could be useful to remove outliers from an alpha mask. |
+| `motion_blur` | Adds a motion blur to the image or channel. That could be used to make an alpha mask move more slowly |
+
+Every *filter* may have additional properties. Please refer to the examples (or come back in the future) for more detailed information.
+
+### Branches Layer
+
+A layer that has an `branches` property.
+Each *branch* is required to have a `layers` property.
+The input to each set of *branch layers* is the input to the *branches* layer.
+The *branches* are then combined (added on top of each other).
+To make *branches* useful, at least the last *branch image* should have an alpha mask.
 
 ## CLI
 
