@@ -6,4 +6,5 @@ layers:
     height: 300
     repeat: true
   - id: out
+    # Note: change to the v4l2loopback device
     output_path: "/dev/video2"
