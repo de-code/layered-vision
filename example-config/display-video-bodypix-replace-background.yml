@@ -19,5 +19,17 @@ layers:
         # model_path: "https://storage.googleapis.com/tfjs-models/savedmodel/bodypix/resnet50/float/model-stride16.json"
         internal_resolution: 0.5
         threshold: 0.5
+      - id: erode
+        filter: erode
+        channel: alpha
+        value: 20
+      - id: dilate
+        filter: dilate
+        channel: alpha
+        value: 19
+      - id: blur
+        filter: box_blur
+        channel: alpha
+        value: 10
   - id: out
     output_path: window

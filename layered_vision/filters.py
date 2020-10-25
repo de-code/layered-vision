@@ -7,7 +7,13 @@ import tensorflow as tf
 from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
 from tf_bodypix.model import BodyPixModelWrapper
 
-from .utils.image import ImageArray, get_image_with_alpha
+from .utils.image import (
+    ImageArray,
+    get_image_with_alpha,
+    box_blur_image,
+    erode_image,
+    dilate_image
+)
 from .config import LayerConfig
 
 
@@ -21,8 +27,8 @@ class LayerFilter(ABC):
 
 
 class AbstractLayerFilter(LayerFilter):
-    def __init__(self, *_, **__):
-        pass
+    def __init__(self, layer_config: dict, **__):
+        self.layer_config = layer_config
 
 
 class ChromaKeyFilter(AbstractLayerFilter):
@@ -90,9 +96,70 @@ class BodyPixFilter(AbstractLayerFilter):
         )
 
 
+CHANNEL_NAMES = ['red', 'green', 'blue', 'alpha']
+
+
+class AbstractOptionalChannelFilter(AbstractLayerFilter):
+    def __init__(self, layer_config: LayerConfig, **kwargs):
+        super().__init__(layer_config, **kwargs)
+        self.channel = layer_config.get('channel')
+        try:
+            self.channel_index = CHANNEL_NAMES.index(self.channel) if self.channel else None
+        except IndexError as exc:
+            raise RuntimeError('invalid channel: %r (expected one of %s)' % (
+                self.channel, CHANNEL_NAMES
+            )) from exc
+
+    @abstractmethod
+    def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
+        pass
+
+    def filter(self, image_array: ImageArray) -> ImageArray:
+        if self.channel_index is None:
+            return self.do_channel_filter(image_array)
+        channel_count = image_array.shape[2]
+        if self.channel_index >= channel_count:
+            LOGGER.debug('image has no channel: %d (%r)', self.channel_index, self.channel)
+            return self.do_channel_filter(image_array)
+        image_channel = np.expand_dims(image_array[:, :, self.channel_index], axis=-1)
+        filtered_image_channel = self.do_channel_filter(image_channel)
+        if len(filtered_image_channel.shape) == 2:
+            filtered_image_channel = np.expand_dims(filtered_image_channel, axis=-1)
+        LOGGER.debug(
+            'image_array shape: %s, filtered_image_channel.shape: %s',
+            image_array.shape, filtered_image_channel.shape
+        )
+        return np.concatenate(
+            (
+                image_array[:, :, :self.channel_index],
+                filtered_image_channel,
+                image_array[:, :, (self.channel_index + 1):]
+            ),
+            axis=-1
+        )
+
+
+class BoxBlurFilter(AbstractOptionalChannelFilter):
+    def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
+        return box_blur_image(image_array, int(self.layer_config.get('value')))
+
+
+class ErodeFilter(AbstractOptionalChannelFilter):
+    def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
+        return erode_image(image_array, int(self.layer_config.get('value')))
+
+
+class DilateFilter(AbstractOptionalChannelFilter):
+    def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
+        return dilate_image(image_array, int(self.layer_config.get('value')))
+
+
 FILTER_CLASS_BY_NAME_MAP = {
     'bodypix': BodyPixFilter,
     'chroma_key': ChromaKeyFilter,
+    'box_blur': BoxBlurFilter,
+    'erode': ErodeFilter,
+    'dilate': DilateFilter
 }
 
 
