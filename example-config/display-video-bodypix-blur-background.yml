@@ -1,0 +1,39 @@
+layers:
+  - id: in
+    # Source: https://www.pexels.com/video/video-of-a-man-laughing-and-happy-1608393/
+    input_path: "https://www.dropbox.com/s/s7jga3f0dreavlb/video-of-a-man-laughing-and-happy-1608393-360p.mp4?dl=1"
+    repeat: true
+    preload: true
+  - id: branches
+    branches:
+    - layers:
+      - id: bg_blur
+        filter: box_blur
+        value: 20
+    - layers:
+      - id: bodypix
+        filter: bodypix
+        model_path: "https://storage.googleapis.com/tfjs-models/savedmodel/bodypix/mobilenet/float/050/model-stride16.json"
+        # model_path: "https://storage.googleapis.com/tfjs-models/savedmodel/bodypix/resnet50/float/model-stride16.json"
+        internal_resolution: 0.5
+        threshold: 0.5
+        cache_model_result_secs: 0
+      - id: erode
+        filter: erode
+        channel: alpha
+        value: 20
+      - id: dilate
+        filter: dilate
+        channel: alpha
+        value: 19
+      - id: blur
+        filter: box_blur
+        channel: alpha
+        value: 10
+      - id: motion_blur
+        filter: motion_blur
+        channel: alpha
+        frame_count: 3
+        decay: 0
+  - id: out
+    output_path: window
