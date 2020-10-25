@@ -7,6 +7,7 @@ from typing import ContextManager, Iterable
 import cv2
 import numpy as np
 
+from .io import get_file
 from .image import ImageArray, ImageSize, rgb_to_bgr, bgr_to_rgb, get_image_size
 
 
@@ -119,7 +120,11 @@ def get_video_image_source(
     fourcc: str = None,
     **_
 ) -> ContextManager[Iterable[ImageArray]]:
-    LOGGER.info('loading video: %r', path)
+    local_path = get_file(path)
+    if local_path != path:
+        LOGGER.info('loading video: %r (downloaded from %r)', local_path, path)
+    else:
+        LOGGER.info('loading video: %r', path)
     video_capture = cv2.VideoCapture(path)
     if fourcc:
         LOGGER.info('setting video fourcc to %r', fourcc)
