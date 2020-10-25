@@ -1,8 +1,9 @@
 import logging
-from pathlib import Path
 from typing import List
 
 import yaml
+
+from .utils.io import read_text
 
 
 LOGGER = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ class AppConfig:
 
 
 def load_raw_config(config_path: str) -> dict:
-    return yaml.safe_load(Path(config_path).read_text())
+    return yaml.safe_load(read_text(config_path))
 
 
 def load_config(config_path: str) -> AppConfig:

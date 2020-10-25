@@ -1,10 +1,15 @@
 import logging
 import os
 from hashlib import md5
+from pathlib import Path
 from urllib.request import urlopen
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+def is_remote_file_path(file_path: str) -> bool:
+    return '://' in str(file_path)
 
 
 def get_file_to(
@@ -41,3 +46,10 @@ def get_file(file_path: str) -> str:
         )
     )
     return local_path
+
+
+def read_text(file_path: str, encoding: str = 'utf-8') -> str:
+    if not is_remote_file_path(file_path):
+        return Path(file_path).read_text(encoding=encoding)
+    with urlopen(file_path) as response:
+        return response.read().decode(encoding=encoding)

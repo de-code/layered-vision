@@ -73,3 +73,10 @@ python -m layered_vision <sub command> --help
 ```bash
 python -m layered_vision start --config-file=example-config/display-image.yml
 ```
+
+You could also load the config from a remote location:
+
+```bash
+python -m layered_vision start --config-file \
+  "https://raw.githubusercontent.com/de-code/layered-vision/develop/example-config/display-video-chroma-key-replace-background.yml"
+```
