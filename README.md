@@ -1,5 +1,6 @@
 # Layered Vision
 
+[![PyPi version](https://pypip.in/v/layered-vision/badge.png)](https://pypi.org/project/layered-vision/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Goals of this project is:
