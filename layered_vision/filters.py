@@ -4,12 +4,17 @@ from time import time
 
 import numpy as np
 
+import cv2
+
 import tensorflow as tf
 from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
 from tf_bodypix.model import BodyPixModelWrapper, BodyPixResultWrapper
 
 from .utils.image import (
     ImageArray,
+    ImageSize,
+    resize_image_to,
+    get_image_size,
     get_image_with_alpha,
     box_blur_image,
     erode_image,
@@ -206,13 +211,29 @@ class MotionBlur(AbstractOptionalChannelFilter):
         return output
 
 
+class PixelateFilter(AbstractOptionalChannelFilter):
+    def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
+        image_size = get_image_size(image_array)
+        resolution =  float(self.layer_config.get('value') or 0.1)
+        target_image_size = ImageSize(
+            width=max(1, int(image_size.width * resolution)),
+            height=max(1, int(image_size.height * resolution))
+        )
+        return resize_image_to(
+            resize_image_to(image_array, target_image_size, interpolation=cv2.INTER_LINEAR),
+            image_size,
+            interpolation=cv2.INTER_NEAREST
+        )
+
+
 FILTER_CLASS_BY_NAME_MAP = {
     'bodypix': BodyPixFilter,
     'chroma_key': ChromaKeyFilter,
     'box_blur': BoxBlurFilter,
     'erode': ErodeFilter,
     'dilate': DilateFilter,
-    'motion_blur': MotionBlur
+    'motion_blur': MotionBlur,
+    'pixelate': PixelateFilter
 }
 
 
