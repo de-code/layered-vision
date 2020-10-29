@@ -6,7 +6,6 @@ import numpy as np
 
 import cv2
 
-import tensorflow as tf
 from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
 from tf_bodypix.model import BodyPixModelWrapper, BodyPixResultWrapper
 
@@ -113,9 +112,10 @@ class BodyPixFilter(AbstractLayerFilter):
 
     def filter(self, image_array: ImageArray) -> ImageArray:
         result = self.get_bodypix_result(image_array)
-        mask = result.get_mask(threshold=self.threshold, dtype=tf.float32) * 255
+        mask = result.get_mask(threshold=self.threshold, dtype=np.uint8)
         if self.parts:
             mask = result.get_part_mask(mask, part_names=self.parts)
+        np.multiply(mask, 255, out=mask)
         LOGGER.debug('mask.shape: %s', mask.shape)
         return get_image_with_alpha(
             image_array,
