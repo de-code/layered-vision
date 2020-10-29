@@ -125,3 +125,8 @@ You could also load the config from a remote location:
 python -m layered_vision start --config-file \
   "https://raw.githubusercontent.com/de-code/layered-vision/develop/example-config/display-video-chroma-key-replace-background.yml"
 ```
+
+## Acknowledgements
+
+* [virtual_webcam_background](https://github.com/allo-/virtual_webcam_background), a somewhat similar project (more focused on bodypix)
+* [OBS Studio](https://obsproject.com/), conceptually a source of inspiration. (with UI etc)
