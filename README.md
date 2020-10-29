@@ -19,6 +19,8 @@ pip install layered-vision
 
 The configuration format is file is [YAML](https://en.wikipedia.org/wiki/YAML).
 
+There are a number of [example configuration files](https://github.com/de-code/layered-vision/tree/develop/example-config).
+
 ### Layers
 
 Every configuration file will contain layers. Layers are generally described from top to down.
@@ -73,7 +75,7 @@ The following inputs are currently supported:
 * Video
 * Linux Webcam (`/dev/videoN`)
 
-The `input_path` may point to a remote location (as is the case with all examples). In that case it will be downloaded and cached locally.
+The `input_path` may point to a remote location (as is the case with [all examples](https://github.com/de-code/layered-vision/tree/develop/example-config)). In that case it will be downloaded and cached locally.
 
 ### Filter Layer
 
@@ -90,7 +92,7 @@ The following filters are currently supported:
 | `erode` | Erodes the image or channel. That could be useful to remove outliers from an alpha mask. |
 | `motion_blur` | Adds a motion blur to the image or channel. That could be used to make an alpha mask move more slowly |
 
-Every *filter* may have additional properties. Please refer to the examples (or come back in the future) for more detailed information.
+Every *filter* may have additional properties. Please refer to the [examples](https://github.com/de-code/layered-vision/tree/develop/example-config) (or come back in the future) for more detailed information.
 
 ### Branches Layer
 
