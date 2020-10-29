@@ -226,6 +226,11 @@ class PixelateFilter(AbstractOptionalChannelFilter):
         )
 
 
+class CopyFilter(AbstractOptionalChannelFilter):
+    def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
+        return image_array
+
+
 FILTER_CLASS_BY_NAME_MAP = {
     'bodypix': BodyPixFilter,
     'chroma_key': ChromaKeyFilter,
@@ -233,7 +238,8 @@ FILTER_CLASS_BY_NAME_MAP = {
     'erode': ErodeFilter,
     'dilate': DilateFilter,
     'motion_blur': MotionBlur,
-    'pixelate': PixelateFilter
+    'pixelate': PixelateFilter,
+    'copy': CopyFilter
 }
 
 
