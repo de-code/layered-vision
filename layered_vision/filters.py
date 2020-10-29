@@ -74,6 +74,9 @@ class BodyPixFilter(AbstractLayerFilter):
         self.cache_model_result_secs = float(
             layer_config.get('cache_model_result_secs') or 0.0
         )
+        self.parts = list(
+            layer_config.get('parts') or []
+        )
         self._bodypix_result_cache = None
         self._bodypix_result_cache_time = None
 
@@ -106,6 +109,8 @@ class BodyPixFilter(AbstractLayerFilter):
     def filter(self, image_array: ImageArray) -> ImageArray:
         result = self.get_bodypix_result(image_array)
         mask = result.get_mask(threshold=self.threshold, dtype=tf.float32) * 255
+        if self.parts:
+            mask = result.get_part_mask(mask, part_names=self.parts)
         LOGGER.debug('mask.shape: %s', mask.shape)
         return get_image_with_alpha(
             image_array,
