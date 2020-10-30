@@ -278,6 +278,9 @@ def add_source_layers_recursively(
         )
     if target_layer.branches:
         for branch in target_layer.branches.branches:
+            if not branch.runtime_layers:
+                branch.runtime_layers = [source_layer]
+                continue
             add_source_layers_recursively(
                 branch.runtime_layers,
                 branch.runtime_layers[-1]

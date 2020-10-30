@@ -4,12 +4,16 @@ from time import time
 
 import numpy as np
 
-import tensorflow as tf
+import cv2
+
 from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
 from tf_bodypix.model import BodyPixModelWrapper, BodyPixResultWrapper
 
 from .utils.image import (
     ImageArray,
+    ImageSize,
+    resize_image_to,
+    get_image_size,
     get_image_with_alpha,
     box_blur_image,
     erode_image,
@@ -74,6 +78,9 @@ class BodyPixFilter(AbstractLayerFilter):
         self.cache_model_result_secs = float(
             layer_config.get('cache_model_result_secs') or 0.0
         )
+        self.parts = list(
+            layer_config.get('parts') or []
+        )
         self._bodypix_result_cache = None
         self._bodypix_result_cache_time = None
 
@@ -105,7 +112,10 @@ class BodyPixFilter(AbstractLayerFilter):
 
     def filter(self, image_array: ImageArray) -> ImageArray:
         result = self.get_bodypix_result(image_array)
-        mask = result.get_mask(threshold=self.threshold, dtype=tf.float32) * 255
+        mask = result.get_mask(threshold=self.threshold, dtype=np.uint8)
+        if self.parts:
+            mask = result.get_part_mask(mask, part_names=self.parts)
+        np.multiply(mask, 255, out=mask)
         LOGGER.debug('mask.shape: %s', mask.shape)
         return get_image_with_alpha(
             image_array,
@@ -201,13 +211,35 @@ class MotionBlur(AbstractOptionalChannelFilter):
         return output
 
 
+class PixelateFilter(AbstractOptionalChannelFilter):
+    def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
+        image_size = get_image_size(image_array)
+        resolution = float(self.layer_config.get('value') or 0.1)
+        target_image_size = ImageSize(
+            width=max(1, int(image_size.width * resolution)),
+            height=max(1, int(image_size.height * resolution))
+        )
+        return resize_image_to(
+            resize_image_to(image_array, target_image_size, interpolation=cv2.INTER_LINEAR),
+            image_size,
+            interpolation=cv2.INTER_NEAREST
+        )
+
+
+class CopyFilter(AbstractOptionalChannelFilter):
+    def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
+        return image_array
+
+
 FILTER_CLASS_BY_NAME_MAP = {
     'bodypix': BodyPixFilter,
     'chroma_key': ChromaKeyFilter,
     'box_blur': BoxBlurFilter,
     'erode': ErodeFilter,
     'dilate': DilateFilter,
-    'motion_blur': MotionBlur
+    'motion_blur': MotionBlur,
+    'pixelate': PixelateFilter,
+    'copy': CopyFilter
 }
 
 

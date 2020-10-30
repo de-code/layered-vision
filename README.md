@@ -88,9 +88,11 @@ The following filters are currently supported:
 | `box_blur` | Blurs the image or channel. |
 | `bodypix` | Uses the [bodypix](https://github.com/de-code/python-tf-bodypix) model to mask a person. |
 | `chroma_key` | Uses a chroma key (colour) to add a mask |
+| `copy` | Copies the input. Mainly useful as a placeholder layer with `branches`. |
 | `dilate` | Dilates the image or channel. For example to increase the alpha mask after using `erode` |
 | `erode` | Erodes the image or channel. That could be useful to remove outliers from an alpha mask. |
 | `motion_blur` | Adds a motion blur to the image or channel. That could be used to make an alpha mask move more slowly |
+| `pixelate` | Pixelates the input. |
 
 Every *filter* may have additional properties. Please refer to the [examples](https://github.com/de-code/layered-vision/tree/develop/example-config) (or come back in the future) for more detailed information.
 
