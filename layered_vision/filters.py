@@ -214,7 +214,7 @@ class MotionBlur(AbstractOptionalChannelFilter):
 class PixelateFilter(AbstractOptionalChannelFilter):
     def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
         image_size = get_image_size(image_array)
-        resolution =  float(self.layer_config.get('value') or 0.1)
+        resolution = float(self.layer_config.get('value') or 0.1)
         target_image_size = ImageSize(
             width=max(1, int(image_size.width * resolution)),
             height=max(1, int(image_size.height * resolution))
