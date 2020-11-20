@@ -73,4 +73,3 @@ class TestMain:
         main(['start', '--config-file=%s' % config_file])
         sink = get_image_output_sink_for_path_mock.last_sink
         assert len(sink.images) > 0
-        assert False
