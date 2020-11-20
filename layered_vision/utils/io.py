@@ -17,8 +17,12 @@ def get_file_to(
     relative_local_file_path: str
 ) -> str:
     if os.path.exists(remote_file_path):
+        LOGGER.debug('file is local file: %s', remote_file_path)
         return remote_file_path
     local_file = os.path.join('data', '.cache', relative_local_file_path)
+    if os.path.exists(local_file):
+        LOGGER.debug('file already downloaded: %s', local_file)
+        return local_file
     with urlopen(remote_file_path) as response:
         data = response.read()
     os.makedirs(os.path.dirname(local_file), exist_ok=True)

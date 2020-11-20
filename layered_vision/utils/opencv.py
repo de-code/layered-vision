@@ -125,7 +125,7 @@ def get_video_image_source(
         LOGGER.info('loading video: %r (downloaded from %r)', local_path, path)
     else:
         LOGGER.info('loading video: %r', path)
-    video_capture = cv2.VideoCapture(path)
+    video_capture = cv2.VideoCapture(local_path)
     if fourcc:
         LOGGER.info('setting video fourcc to %r', fourcc)
         video_capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*fourcc))
