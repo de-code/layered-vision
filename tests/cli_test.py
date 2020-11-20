@@ -10,6 +10,13 @@ EXAMPLE_IMAGE_URL = (
 )
 
 
+def _load_image(path: str):
+    image = cv2.imread(str(path))
+    if image is None:
+        raise FileNotFoundError('failed to load image: %r' % path)
+    return image
+
+
 class TestMain:
     def test_should_copy_source_to_target_image(self, temp_dir: Path):
         output_path = temp_dir / 'output.png'
@@ -27,7 +34,7 @@ class TestMain:
             )
         )
         main(['start', '--config-file=%s' % config_file])
-        image = cv2.imread(str(output_path))
+        image = _load_image(output_path)
         height, width, *_ = image.shape
         assert width > 0
         assert height > 0
@@ -50,7 +57,7 @@ class TestMain:
             )
         )
         main(['start', '--config-file=%s' % config_file])
-        image = cv2.imread(str(output_path))
+        image = _load_image(output_path)
         height, width, *_ = image.shape
         assert (width, height) == (320, 200)
 
@@ -77,6 +84,6 @@ class TestMain:
         )
         main(['start', '--config-file=%s' % config_file])
         for output_path in [output_path_1, output_path_2]:
-            image = cv2.imread(str(output_path))
+            image = _load_image(output_path)
             height, width, *_ = image.shape
             assert (width, height) == (320, 200)
