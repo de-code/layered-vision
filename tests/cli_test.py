@@ -10,6 +10,17 @@ EXAMPLE_IMAGE_URL = (
 )
 
 
+def _quote_path(path: str) -> str:
+    return repr(str(path))
+
+
+def _load_image(path: str):
+    image = cv2.imread(str(path))
+    if image is None:
+        raise FileNotFoundError('failed to load image: %r' % path)
+    return image
+
+
 class TestMain:
     def test_should_copy_source_to_target_image(self, temp_dir: Path):
         output_path = temp_dir / 'output.png'
@@ -18,16 +29,16 @@ class TestMain:
             '''
             layers:
             - id: in
-              input_path: "{input_path}"
+              input_path: {input_path}
             - id: out
-              output_path: "{output_path}"
+              output_path: {output_path}
             '''.format(
-                input_path=EXAMPLE_IMAGE_URL,
-                output_path=output_path
+                input_path=_quote_path(EXAMPLE_IMAGE_URL),
+                output_path=_quote_path(output_path)
             )
         )
         main(['start', '--config-file=%s' % config_file])
-        image = cv2.imread(str(output_path))
+        image = _load_image(output_path)
         height, width, *_ = image.shape
         assert width > 0
         assert height > 0
@@ -39,18 +50,18 @@ class TestMain:
             '''
             layers:
             - id: in
-              input_path: "{input_path}"
+              input_path: {input_path}
               width: 320
               height: 200
             - id: out
-              output_path: "{output_path}"
+              output_path: {output_path}
             '''.format(
-                input_path=EXAMPLE_IMAGE_URL,
-                output_path=output_path
+                input_path=_quote_path(EXAMPLE_IMAGE_URL),
+                output_path=_quote_path(output_path)
             )
         )
         main(['start', '--config-file=%s' % config_file])
-        image = cv2.imread(str(output_path))
+        image = _load_image(output_path)
         height, width, *_ = image.shape
         assert (width, height) == (320, 200)
 
@@ -62,21 +73,21 @@ class TestMain:
             '''
             layers:
             - id: in
-              input_path: "{input_path}"
+              input_path: {input_path}
               width: 320
               height: 200
             - id: out_1
-              output_path: "{output_path_1}"
+              output_path: {output_path_1}
             - id: out_2
-              output_path: "{output_path_2}"
+              output_path: {output_path_2}
             '''.format(
-                input_path=EXAMPLE_IMAGE_URL,
-                output_path_1=output_path_1,
-                output_path_2=output_path_2
+                input_path=_quote_path(EXAMPLE_IMAGE_URL),
+                output_path_1=_quote_path(output_path_1),
+                output_path_2=_quote_path(output_path_2)
             )
         )
         main(['start', '--config-file=%s' % config_file])
         for output_path in [output_path_1, output_path_2]:
-            image = cv2.imread(str(output_path))
+            image = _load_image(output_path)
             height, width, *_ = image.shape
             assert (width, height) == (320, 200)
