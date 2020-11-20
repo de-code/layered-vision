@@ -12,12 +12,12 @@ class TestMain:
             '''
             layers:
             - id: in
-              input_path: "{input_path}"
+              input_path: {input_path}
             - id: out
-              output_path: "{output_path}"
+              output_path: {output_path}
             '''.format(
-                input_path=input_path,
-                output_path=output_path
+                input_path=repr(input_path),
+                output_path=repr(output_path)
             )
         )
         with LayeredVisionApp(str(config_file)) as app:
@@ -34,14 +34,14 @@ class TestMain:
             '''
             layers:
             - id: in_ignored
-              input_path: "{input_path}"
+              input_path: {input_path}
             - id: in
-              input_path: "{input_path}"
+              input_path: {input_path}
             - id: out
-              output_path: "{output_path}"
+              output_path: {output_path}
             '''.format(
-                input_path=input_path,
-                output_path=output_path
+                input_path=repr(input_path),
+                output_path=repr(output_path)
             )
         )
         with LayeredVisionApp(str(config_file)) as app:
