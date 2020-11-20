@@ -11,9 +11,26 @@ This project is still very much experimental and may change significantly.
 
 ## Install
 
+Install with all dependencies:
+
+```bash
+pip install layered-vision[all]
+```
+
+Install with minimal dependencies:
+
 ```bash
 pip install layered-vision
 ```
+
+Extras are provided to make it easier to provide or exclude dependencies
+when using this project as a library:
+
+| extra name | description
+| ---------- | -----------
+| bodypix    | For [bodypix](https://github.com/de-code/python-tf-bodypix) filter
+| webcam     | Virtual Webcam support via pyfakewebcam
+| all        | All of the libraries
 
 ## Configuration
 
