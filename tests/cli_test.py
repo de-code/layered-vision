@@ -10,6 +10,10 @@ EXAMPLE_IMAGE_URL = (
 )
 
 
+def _quote_path(path: str) -> str:
+    return repr(str(path))
+
+
 def _load_image(path: str):
     image = cv2.imread(str(path))
     if image is None:
@@ -29,8 +33,8 @@ class TestMain:
             - id: out
               output_path: {output_path}
             '''.format(
-                input_path=repr(EXAMPLE_IMAGE_URL),
-                output_path=repr(output_path)
+                input_path=_quote_path(EXAMPLE_IMAGE_URL),
+                output_path=_quote_path(output_path)
             )
         )
         main(['start', '--config-file=%s' % config_file])
@@ -52,8 +56,8 @@ class TestMain:
             - id: out
               output_path: {output_path}
             '''.format(
-                input_path=repr(EXAMPLE_IMAGE_URL),
-                output_path=repr(output_path)
+                input_path=_quote_path(EXAMPLE_IMAGE_URL),
+                output_path=_quote_path(output_path)
             )
         )
         main(['start', '--config-file=%s' % config_file])
@@ -77,9 +81,9 @@ class TestMain:
             - id: out_2
               output_path: {output_path_2}
             '''.format(
-                input_path=repr(EXAMPLE_IMAGE_URL),
-                output_path_1=repr(output_path_1),
-                output_path_2=repr(output_path_2)
+                input_path=_quote_path(EXAMPLE_IMAGE_URL),
+                output_path_1=_quote_path(output_path_1),
+                output_path_2=_quote_path(output_path_2)
             )
         )
         main(['start', '--config-file=%s' % config_file])

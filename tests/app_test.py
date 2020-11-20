@@ -3,6 +3,10 @@ from pathlib import Path
 from layered_vision.app import LayeredVisionApp
 
 
+def _quote_path(path: str) -> str:
+    return repr(str(path))
+
+
 class TestMain:
     def test_should_configure_simple_input_output(self, temp_dir: Path):
         input_path = temp_dir / 'input.png'
@@ -16,8 +20,8 @@ class TestMain:
             - id: out
               output_path: {output_path}
             '''.format(
-                input_path=repr(input_path),
-                output_path=repr(output_path)
+                input_path=_quote_path(input_path),
+                output_path=_quote_path(output_path)
             )
         )
         with LayeredVisionApp(str(config_file)) as app:
@@ -40,8 +44,8 @@ class TestMain:
             - id: out
               output_path: {output_path}
             '''.format(
-                input_path=repr(input_path),
-                output_path=repr(output_path)
+                input_path=_quote_path(input_path),
+                output_path=_quote_path(output_path)
             )
         )
         with LayeredVisionApp(str(config_file)) as app:
