@@ -65,10 +65,18 @@ def _get_image_source_for_path_mock():
 
 
 class TestMain:
+    @pytest.mark.parametrize("example_config_filename", [
+        'display-image.yml',
+        'display-video-bodypix-blur-background.yml',
+        'display-video-bodypix-pixelated-face.yml',
+        'display-video-bodypix-replace-background.yml',
+        'display-video-chroma-key-replace-background.yml',
+        'display-video-chroma-key.yml'
+    ])
     def test_should_process_example(
             self,
+            example_config_filename: str,
             get_image_output_sink_for_path_mock: GetCapturingOutputSink):
-        example_config_filename = 'display-video-bodypix-replace-background.yml'
         config_file = Path(EXAMPLE_CONFIG_DIR) / example_config_filename
         main(['start', '--config-file=%s' % config_file])
         sink = get_image_output_sink_for_path_mock.last_sink
