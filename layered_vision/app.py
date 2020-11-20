@@ -18,7 +18,7 @@ from .sinks import (
 
 from .config import load_config, LayerConfig
 from .sources import get_image_source_for_path, T_ImageSource
-from .filters import LayerFilter, create_filter
+from .filters.api import LayerFilter, create_filter
 
 
 LOGGER = logging.getLogger(__name__)
