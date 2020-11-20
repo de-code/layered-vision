@@ -18,12 +18,12 @@ class TestMain:
             '''
             layers:
             - id: in
-              input_path: "{input_path}"
+              input_path: {input_path}
             - id: out
-              output_path: "{output_path}"
+              output_path: {output_path}
             '''.format(
-                input_path=EXAMPLE_IMAGE_URL,
-                output_path=output_path
+                input_path=repr(EXAMPLE_IMAGE_URL),
+                output_path=repr(output_path)
             )
         )
         main(['start', '--config-file=%s' % config_file])
@@ -39,14 +39,14 @@ class TestMain:
             '''
             layers:
             - id: in
-              input_path: "{input_path}"
+              input_path: {input_path}
               width: 320
               height: 200
             - id: out
-              output_path: "{output_path}"
+              output_path: {output_path}
             '''.format(
-                input_path=EXAMPLE_IMAGE_URL,
-                output_path=output_path
+                input_path=repr(EXAMPLE_IMAGE_URL),
+                output_path=repr(output_path)
             )
         )
         main(['start', '--config-file=%s' % config_file])
@@ -62,17 +62,17 @@ class TestMain:
             '''
             layers:
             - id: in
-              input_path: "{input_path}"
+              input_path: {input_path}
               width: 320
               height: 200
             - id: out_1
-              output_path: "{output_path_1}"
+              output_path: {output_path_1}
             - id: out_2
-              output_path: "{output_path_2}"
+              output_path: {output_path_2}
             '''.format(
-                input_path=EXAMPLE_IMAGE_URL,
-                output_path_1=output_path_1,
-                output_path_2=output_path_2
+                input_path=repr(EXAMPLE_IMAGE_URL),
+                output_path_1=repr(output_path_1),
+                output_path_2=repr(output_path_2)
             )
         )
         main(['start', '--config-file=%s' % config_file])
