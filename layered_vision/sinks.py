@@ -8,7 +8,9 @@ import cv2
 
 from .utils.image import ImageArray, rgb_to_bgr
 from .utils.opencv import ShowImageSink
-from .utils.v4l2 import VideoLoopbackImageSink
+
+
+# pylint: disable=import-outside-toplevel
 
 
 LOGGER = logging.getLogger(__name__)
@@ -33,6 +35,7 @@ def is_v4l2_path(path: str) -> bool:
 
 
 def get_v4l2_output_sink(device_name: str) -> T_OutputSink:
+    from tf_bodypix.utils.v4l2 import VideoLoopbackImageSink
     return VideoLoopbackImageSink(device_name)
 
 
