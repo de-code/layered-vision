@@ -9,7 +9,7 @@ import cv2
 from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
 from tf_bodypix.model import BodyPixModelWrapper, BodyPixResultWrapper
 
-from .utils.image import (
+from ..utils.image import (
     ImageArray,
     ImageSize,
     resize_image_to,
@@ -19,7 +19,7 @@ from .utils.image import (
     erode_image,
     dilate_image
 )
-from .config import LayerConfig
+from ..config import LayerConfig
 
 
 LOGGER = logging.getLogger(__name__)
