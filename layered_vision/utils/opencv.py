@@ -118,6 +118,7 @@ def get_video_image_source(
     preload: bool = False,
     fps: float = None,
     fourcc: str = None,
+    buffer_size: int = None,
     **_
 ) -> ContextManager[Iterable[ImageArray]]:
     local_path = get_file(path)
@@ -129,6 +130,8 @@ def get_video_image_source(
     if fourcc:
         LOGGER.info('setting video fourcc to %r', fourcc)
         video_capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*fourcc))
+    if buffer_size:
+        video_capture.set(cv2.CAP_PROP_BUFFERSIZE, buffer_size)
     if image_size:
         LOGGER.info('attempting to set video image size to: %s', image_size)
         video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, image_size.width)
@@ -161,11 +164,12 @@ def get_video_image_source(
 def get_webcam_image_source(
     *args,
     fourcc: str = None,
+    buffer_size: int = 1,
     **kwargs
 ) -> ContextManager[Iterable[ImageArray]]:
     if fourcc is None:
         fourcc = DEFAULT_WEBCAM_FOURCC
-    return get_video_image_source(*args, fourcc=fourcc, **kwargs)
+    return get_video_image_source(*args, fourcc=fourcc, buffer_size=buffer_size, **kwargs)
 
 
 class ShowImageSink:
