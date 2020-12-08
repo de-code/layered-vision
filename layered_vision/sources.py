@@ -26,12 +26,23 @@ def get_simple_image_source(
 ) -> T_ImageSource:
     local_image_path = get_file(path)
     LOGGER.debug('local_image_path: %r', local_image_path)
-    bgr_image_array = cv2.imread(local_image_path)
+    bgr_image_array = cv2.imread(local_image_path, cv2.IMREAD_UNCHANGED)
     if bgr_image_array is None:
         raise IOError('failed to load image: %r' % local_image_path)
-    image_array = bgr_to_rgb(bgr_image_array)
+    rgb_image_array = bgr_to_rgb(bgr_image_array)
+    image_array = rgb_image_array
+    LOGGER.info(
+        'image loaded: %r (shape: %s, requested size: %s)',
+        path, image_array.shape, image_size
+    )
     if image_size is not None:
         image_array = resize_image_to(image_array, image_size)
+    LOGGER.debug(
+        'image loaded: %r (bgr: %s [%s] -> rgb: %s [%s] -> resized: %s [%s])',
+        path, bgr_image_array.shape, bgr_image_array.dtype,
+        rgb_image_array.shape, rgb_image_array.dtype,
+        image_array.shape, image_array.dtype
+    )
     image_array_iterable = [image_array]
     if repeat:
         image_array_iterable = cycle(image_array_iterable)

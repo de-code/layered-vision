@@ -59,12 +59,22 @@ def erode_image(image: ImageArray, size: int) -> ImageArray:
 
 
 def bgr_to_rgb(image: ImageArray) -> ImageArray:
-    # see https://www.scivision.dev/numpy-image-bgr-to-rgb/
-    return image[..., ::-1]
+    LOGGER.debug('bgr_to_rgb, image: %s [%s]', image.shape, image.dtype)
+    color_channels = image.shape[-1]
+    if color_channels == 3:
+        # see https://www.scivision.dev/numpy-image-bgr-to-rgb/
+        return image[..., ::-1]
+    # bgra to rgba
+    return cv2.cvtColor(image, cv2.COLOR_BGRA2RGBA)
 
 
 def rgb_to_bgr(image: ImageArray) -> ImageArray:
-    return bgr_to_rgb(image)
+    LOGGER.debug('rgb_to_bgr, image: %s [%s]', image.shape, image.dtype)
+    color_channels = image.shape[-1]
+    if color_channels == 3:
+        return cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    # rgba to bgra
+    return cv2.cvtColor(image, cv2.COLOR_RGBA2BGRA)
 
 
 def get_image_with_alpha(image: ImageArray, alpha: ImageArray) -> ImageArray:
@@ -80,11 +90,14 @@ def get_image_with_alpha(image: ImageArray, alpha: ImageArray) -> ImageArray:
 
 
 def apply_alpha(image: ImageArray) -> ImageArray:
+    LOGGER.debug('apply_alpha, image: %s [%s]', image.shape, image.dtype)
     color_channels = image.shape[-1]
     if color_channels == 3:
         return image
     if color_channels == 4:
-        return image[:, :, :3] * (image[:, :, 3:] / 255)
+        result = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
+        LOGGER.debug('apply_alpha, result: %s [%s]', result.shape, result.dtype)
+        return result
     raise ValueError('unsupported image, shape=%s' % image.shape)
 
 
