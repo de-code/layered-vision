@@ -288,7 +288,7 @@ def add_source_layers_recursively(
 
 
 class LayeredVisionApp:
-    def __init__(self, config_path: str, override_map: Dict[str, Dict[str, str]]):
+    def __init__(self, config_path: str, override_map: Dict[str, Dict[str, str]] = None):
         self.config_path = config_path
         self.override_map = override_map
         self.exit_stack = ExitStack()
