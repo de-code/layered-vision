@@ -59,6 +59,7 @@ def get_merged_set_values(set_values: List[Dict[str, Dict[str, str]]]) -> Dict[s
                 result.setdefault(layer_id, {})[prop_name] = value
     return result
 
+
 class StartSubCommand(SubCommand):
     def __init__(self):
         super().__init__("start", "Start Layered Vision")

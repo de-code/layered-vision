@@ -6,6 +6,7 @@ import pytest
 
 from layered_vision.cli import (
     parse_set_value,
+    get_merged_set_values,
     main
 )
 
@@ -41,6 +42,28 @@ class TestParseSetValue:
     def test_should_fail_with_missing_layer_id(self):
         with pytest.raises(ValueError):
             assert parse_set_value('input_path=/path/to/input')
+
+
+class TestGetMergedSetValues:
+    def test_should_merge_properties_with_same_layer_id(self):
+        assert get_merged_set_values([
+            {'id1': {'prop1': 'value1'}},
+            {'id1': {'prop2': 'value2'}}
+        ]) == {
+            'id1': {
+                'prop1': 'value1',
+                'prop2': 'value2'
+            }
+        }
+
+    def test_should_merge_properties_with_different_layer_id(self):
+        assert get_merged_set_values([
+            {'id1': {'prop1': 'value1'}},
+            {'id2': {'prop2': 'value2'}}
+        ]) == {
+            'id1': {'prop1': 'value1'},
+            'id2': {'prop2': 'value2'}
+        }
 
 
 class TestMain:
