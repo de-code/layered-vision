@@ -15,6 +15,8 @@ VENV_TEMP = venv_temp
 
 ARGS =
 
+IMAGE_TAG = develop
+
 
 venv-clean:
 	@if [ -d "$(VENV)" ]; then \
@@ -82,3 +84,15 @@ dev-test-install-dist:
 
 start:
 	$(PYTHON) -m layered_vision start $(ARGS)
+
+
+docker-build:
+	docker build . -t de-code/layered-vision:$(IMAGE_TAG)
+
+
+docker-run:
+	docker run \
+		-v /tmp/.X11-unix:/tmp/.X11-unix \
+		-e DISPLAY=unix$$DISPLAY \
+		-v /dev/shm:/dev/shm \
+		--rm de-code/layered-vision:$(IMAGE_TAG) $(ARGS)
