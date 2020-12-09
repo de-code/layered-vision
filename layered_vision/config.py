@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import Dict, Iterable, List
 
 import yaml
 
@@ -39,6 +39,9 @@ class AppConfig:
             for layer_data in data.get('layers', [])
         ])
 
+    def iter_layers(self) -> Iterable[LayerConfig]:
+        return self.layers
+
     def __repr__(self):
         return '%s(layer=%r)' % (
             type(self).__name__,
@@ -52,3 +55,17 @@ def load_raw_config(config_path: str) -> dict:
 
 def load_config(config_path: str) -> AppConfig:
     return AppConfig.from_json(load_raw_config(config_path))
+
+
+def apply_config_override_map(app_config: AppConfig, override_map: Dict[str, Dict[str, str]]):
+    if not override_map:
+        return
+    for layer_config in app_config.iter_layers():
+        layer_id = layer_config.get('id')
+        if not layer_id:
+            continue
+        layer_override_map = override_map.get(layer_id)
+        if not layer_override_map:
+            continue
+        for prop_name, value in layer_override_map.items():
+            layer_config.props[prop_name] = value

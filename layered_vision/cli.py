@@ -2,7 +2,7 @@ import argparse
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = "3"
 
@@ -37,6 +37,28 @@ def add_common_arguments(parser: argparse.ArgumentParser):
     )
 
 
+def parse_set_value(text: str) -> Tuple[str, str]:
+    try:
+        key, value = text.split('=', maxsplit=1)
+    except ValueError as exc:
+        raise ValueError('value expected, format: <layer id>.<prop name>=<value>') from exc
+    try:
+        layer_id, prop_name = key.split('.', maxsplit=1)
+    except ValueError as exc:
+        raise ValueError('layer id expected, format: <layer id>.<prop name>=<value>') from exc
+    return {layer_id: {prop_name: value}}
+
+
+def get_merged_set_values(set_values: List[Dict[str, Dict[str, str]]]) -> Dict[str, Dict[str, str]]:
+    if not set_values:
+        return {}
+    result = {}
+    for set_value in set_values:
+        for layer_id, props in set_value.items():
+            for prop_name, value in props.items():
+                result.setdefault(layer_id, {})[prop_name] = value
+    return result
+
 class StartSubCommand(SubCommand):
     def __init__(self):
         super().__init__("start", "Start Layered Vision")
@@ -48,9 +70,17 @@ class StartSubCommand(SubCommand):
             default="config.yml",
             help="The path to the config file"
         )
+        parser.add_argument(
+            "--set",
+            action='append',
+            type=parse_set_value,
+            help="Allows to override config options in the format: <layer id>.<prop name>=value"
+        )
 
     def run(self, args: argparse.Namespace):  # pylint: disable=unused-argument
-        with LayeredVisionApp(config_path=args.config_file) as app:
+        override_map = get_merged_set_values(args.set)
+        LOGGER.debug('override_map: %s', override_map)
+        with LayeredVisionApp(config_path=args.config_file, override_map=override_map) as app:
             app.run()
 
 

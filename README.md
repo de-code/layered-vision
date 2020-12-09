@@ -148,6 +148,13 @@ python -m layered_vision start --config-file \
   "https://raw.githubusercontent.com/de-code/layered-vision/develop/example-config/display-video-chroma-key-replace-background.yml"
 ```
 
+It is also possible to override config values via command line arguments, e.g.:
+
+```bash
+python -m layered_vision start --config-file=example-config/display-image.yml \
+    --set out.output_path=/path/to/output.png
+```
+
 ## Acknowledgements
 
 * [virtual_webcam_background](https://github.com/allo-/virtual_webcam_background), a somewhat similar project (more focused on bodypix)
