@@ -2,7 +2,13 @@ from pathlib import Path
 
 import cv2
 
-from layered_vision.cli import main
+import pytest
+
+from layered_vision.cli import (
+    parse_set_value,
+    get_merged_set_values,
+    main
+)
 
 
 EXAMPLE_IMAGE_URL = (
@@ -19,6 +25,45 @@ def _load_image(path: str):
     if image is None:
         raise FileNotFoundError('failed to load image: %r' % path)
     return image
+
+
+class TestParseSetValue:
+    def test_should_parse_simple_expression(self):
+        assert parse_set_value('in.input_path=/path/to/input') == {
+            'in': {
+                'input_path': '/path/to/input'
+            }
+        }
+
+    def test_should_fail_with_missing_value(self):
+        with pytest.raises(ValueError):
+            assert parse_set_value('in.input_path')
+
+    def test_should_fail_with_missing_layer_id(self):
+        with pytest.raises(ValueError):
+            assert parse_set_value('input_path=/path/to/input')
+
+
+class TestGetMergedSetValues:
+    def test_should_merge_properties_with_same_layer_id(self):
+        assert get_merged_set_values([
+            {'id1': {'prop1': 'value1'}},
+            {'id1': {'prop2': 'value2'}}
+        ]) == {
+            'id1': {
+                'prop1': 'value1',
+                'prop2': 'value2'
+            }
+        }
+
+    def test_should_merge_properties_with_different_layer_id(self):
+        assert get_merged_set_values([
+            {'id1': {'prop1': 'value1'}},
+            {'id2': {'prop2': 'value2'}}
+        ]) == {
+            'id1': {'prop1': 'value1'},
+            'id2': {'prop2': 'value2'}
+        }
 
 
 class TestMain:
@@ -91,3 +136,28 @@ class TestMain:
             image = _load_image(output_path)
             height, width, *_ = image.shape
             assert (width, height) == (320, 200)
+
+    def test_should_be_able_to_replace_input_and_output_path(self, temp_dir: Path):
+        output_path = temp_dir / 'output.png'
+        config_file = temp_dir / 'config.yml'
+        config_file.write_text(
+            '''
+            layers:
+            - id: in
+              input_path: "dummy"
+            - id: out
+              output_path: "dummy"
+            '''
+        )
+        main([
+            'start',
+            '--config-file=%s' % config_file,
+            '--set',
+            'in.input_path=%s' % EXAMPLE_IMAGE_URL,
+            '--set',
+            'out.output_path=%s' % output_path
+        ])
+        image = _load_image(output_path)
+        height, width, *_ = image.shape
+        assert width > 0
+        assert height > 0

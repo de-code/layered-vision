@@ -1,6 +1,6 @@
 import logging
 from contextlib import ExitStack
-from typing import ContextManager, Iterable, Optional, List
+from typing import ContextManager, Dict, Iterable, Optional, List
 
 from .utils.timer import LoggingTimer
 from .utils.image import (
@@ -16,7 +16,7 @@ from .sinks import (
     get_image_output_sink_for_path
 )
 
-from .config import load_config, LayerConfig
+from .config import load_config, apply_config_override_map, LayerConfig
 from .sources import get_image_source_for_path, T_ImageSource
 from .filters.api import LayerFilter, create_filter
 
@@ -288,8 +288,9 @@ def add_source_layers_recursively(
 
 
 class LayeredVisionApp:
-    def __init__(self, config_path: str):
+    def __init__(self, config_path: str, override_map: Dict[str, Dict[str, str]] = None):
         self.config_path = config_path
+        self.override_map = override_map
         self.exit_stack = ExitStack()
         self.timer = LoggingTimer()
         self.config = None
@@ -313,6 +314,7 @@ class LayeredVisionApp:
 
     def load(self):
         self.config = load_config(self.config_path)
+        apply_config_override_map(self.config, self.override_map)
         LOGGER.info('config: %s', self.config)
         layers = self.config.layers
         assert len(layers) >= 2
