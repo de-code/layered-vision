@@ -28,6 +28,6 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: de-code/layered-vision_unstable:${{ github.sha }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/layered-vision_unstable:${{ github.sha }}
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
