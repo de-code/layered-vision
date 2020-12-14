@@ -15,6 +15,7 @@ VENV_TEMP = venv_temp
 
 ARGS =
 
+IMAGE_NAME = de4code/layered-vision_unstable
 IMAGE_TAG = develop
 
 
@@ -87,7 +88,7 @@ start:
 
 
 docker-build:
-	docker build . -t de-code/layered-vision:$(IMAGE_TAG)
+	docker build . -t $(IMAGE_NAME):$(IMAGE_TAG)
 
 
 docker-run:
@@ -95,4 +96,4 @@ docker-run:
 		-v /tmp/.X11-unix:/tmp/.X11-unix \
 		-e DISPLAY=unix$$DISPLAY \
 		-v /dev/shm:/dev/shm \
-		--rm de-code/layered-vision:$(IMAGE_TAG) $(ARGS)
+		--rm $(IMAGE_NAME):$(IMAGE_TAG) $(ARGS)
