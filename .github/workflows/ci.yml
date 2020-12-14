@@ -73,6 +73,7 @@ jobs:
           else
             TAGS="${DOCKER_IMAGE}_unstable:${GITHUB_SHA},${DOCKER_IMAGE}_unstable:latest"
           fi
+          echo "TAGS=${TAGS}"
           echo ::set-output name=tags::${TAGS}
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
