@@ -155,6 +155,27 @@ python -m layered_vision start --config-file=example-config/display-image.yml \
     --set out.output_path=/path/to/output.png
 ```
 
+### Docker Usage
+
+You could also use the Docker image if you prefer.
+The entrypoint will by default delegate to the CLI, except for `python` or `bash` commands.
+
+```bash
+docker pull de4code/layered-vision
+
+docker run --rm \
+  --device /dev/video0 \
+  --device /dev/video2 \
+  de4code/layered-vision start \
+  --config-file \
+  "https://raw.githubusercontent.com/de-code/layered-vision/develop/example-config/webcam-bodypix-replace-background-to-v4l2loopback.yml" \
+  --set bg.input_path=https://www.dropbox.com/s/4debg4lrgn5g36l/toy-train-3288425.mp4?dl=1 \
+  --set in.input_path=/dev/video0 \
+  --set out.output_path=/dev/video2
+```
+
+(Background: [Toy Train](https://www.pexels.com/video/toy-train-3288425/))
+
 ## Acknowledgements
 
 * [virtual_webcam_background](https://github.com/allo-/virtual_webcam_background), a somewhat similar project (more focused on bodypix)
