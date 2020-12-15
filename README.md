@@ -169,9 +169,9 @@ docker run --rm \
   de4code/layered-vision start \
   --config-file \
   "https://raw.githubusercontent.com/de-code/layered-vision/develop/example-config/webcam-bodypix-replace-background-to-v4l2loopback.yml" \
-  --set bg.input_path=https://www.dropbox.com/s/4debg4lrgn5g36l/toy-train-3288425.mp4?dl=1 \
-  --set in.input_path=/dev/video0 \
-  --set out.output_path=/dev/video2
+  --set bg.input_path="https://www.dropbox.com/s/4debg4lrgn5g36l/toy-train-3288425.mp4?dl=1" \
+  --set in.input_path="/dev/video0" \
+  --set out.output_path="/dev/video2"
 ```
 
 (Background: [Toy Train](https://www.pexels.com/video/toy-train-3288425/))
