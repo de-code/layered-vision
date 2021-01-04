@@ -1,5 +1,5 @@
 numpy==1.19.4
-opencv-python==4.4.0.46 
+opencv-python==4.5.1.48 
 pyfakewebcam==0.1.0
 PyYAML==5.3.1
 tf-bodypix[tf,tfjs]==0.3.4
