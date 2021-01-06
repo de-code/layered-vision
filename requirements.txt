@@ -1,4 +1,4 @@
-numpy==1.19.4
+numpy==1.19.5
 opencv-python==4.5.1.48 
 pyfakewebcam==0.1.0
 PyYAML==5.3.1
