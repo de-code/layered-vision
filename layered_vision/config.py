@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Union, Any
 
 import yaml
 
@@ -27,6 +27,17 @@ class LayerConfig:
         )
 
 
+def _iter_find_nested_layer_props(parent: Union[dict, list, Any]) -> Iterable[dict]:
+    if isinstance(parent, dict):
+        for key, value in parent.items():
+            if key == 'layers':
+                yield from value
+            yield from _iter_find_nested_layer_props(value)
+    if isinstance(parent, list):
+        for item in parent:
+            yield from _iter_find_nested_layer_props(item)
+
+
 class AppConfig:
     def __init__(self, layers: List[LayerConfig]):
         self.layers = layers
@@ -41,6 +52,11 @@ class AppConfig:
 
     def iter_layers(self) -> Iterable[LayerConfig]:
         return self.layers
+
+    def iter_flatten_layer_props(self) -> Iterable[LayerConfig]:
+        for layer in self.layers:
+            yield layer.props
+            yield from _iter_find_nested_layer_props(layer.props)
 
     def __repr__(self):
         return '%s(layer=%r)' % (
@@ -60,12 +76,12 @@ def load_config(config_path: str) -> AppConfig:
 def apply_config_override_map(app_config: AppConfig, override_map: Dict[str, Dict[str, str]]):
     if not override_map:
         return
-    for layer_config in app_config.iter_layers():
-        layer_id = layer_config.get('id')
+    for layer_config_props in app_config.iter_flatten_layer_props():
+        layer_id = layer_config_props.get('id')
         if not layer_id:
             continue
         layer_override_map = override_map.get(layer_id)
         if not layer_override_map:
             continue
         for prop_name, value in layer_override_map.items():
-            layer_config.props[prop_name] = value
+            layer_config_props[prop_name] = value
