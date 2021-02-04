@@ -76,12 +76,22 @@ def load_config(config_path: str) -> AppConfig:
 def apply_config_override_map(app_config: AppConfig, override_map: Dict[str, Dict[str, str]]):
     if not override_map:
         return
+    consumed_override_layer_ids = set()
+    valid_layer_ids = set()
     for layer_config_props in app_config.iter_flatten_layer_props():
         layer_id = layer_config_props.get('id')
         if not layer_id:
             continue
+        valid_layer_ids.add(layer_id)
         layer_override_map = override_map.get(layer_id)
         if not layer_override_map:
             continue
         for prop_name, value in layer_override_map.items():
             layer_config_props[prop_name] = value
+        consumed_override_layer_ids.add(layer_id)
+    unknown_override_layer_ids = set(override_map.keys()) - consumed_override_layer_ids
+    if unknown_override_layer_ids:
+        raise ValueError('invalid override layer ids: %s (valid ids are: %s)' % (
+            unknown_override_layer_ids,
+            valid_layer_ids
+        ))

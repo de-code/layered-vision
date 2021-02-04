@@ -1,3 +1,5 @@
+import pytest
+
 from layered_vision.config import (
     AppConfig,
     LayerConfig,
@@ -13,12 +15,12 @@ class TestApplyConfigOverrideMap:
         apply_config_override_map(app_config, {})
         assert app_config.layers[0].get('prop') == 'value1'
 
-    def test_should_not_override_for_mismatching_id(self):
+    def test_should_raise_exception_if_id_was_not_found(self):
         app_config = AppConfig(layers=[
             LayerConfig({'id': 'id1', 'prop': 'value1'})
         ])
-        apply_config_override_map(app_config, {'id-x': {'prop': 'new-value'}})
-        assert app_config.layers[0].get('prop') == 'value1'
+        with pytest.raises(ValueError):
+            apply_config_override_map(app_config, {'other-id': {'prop': 'new-value'}})
 
     def test_should_override_prop_of_root_layer(self):
         app_config = AppConfig(layers=[
