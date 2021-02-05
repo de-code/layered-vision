@@ -156,6 +156,17 @@ python -m layered_vision start --config-file=example-config/display-image.yml \
     --set out.output_path=/path/to/output.png
 ```
 
+You could also try replacing the background with a YouTube stream:
+
+```bash
+python -m layered_vision start \
+  --config-file \
+  "https://raw.githubusercontent.com/de-code/layered-vision/develop/example-config/webcam-bodypix-replace-background-to-v4l2loopback.yml" \
+  --set bg.input_path="https://youtu.be/yswkqEBio2k" \
+  --set in.input_path="/dev/video0" \
+  --set out.output_path="/dev/video2"
+```
+
 ### Docker Usage
 
 You could also use the Docker image if you prefer.
