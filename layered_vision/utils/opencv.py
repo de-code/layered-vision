@@ -242,14 +242,18 @@ def get_youtube_video_image_source(
     *args,
     image_size: ImageSize = None,
     download: bool = False,
+    preload: bool = False,
     preferred_type: str = 'mp4',
     **kwargs
 ) -> ContextManager[Iterable[ImageArray]]:
+    if not download:
+        preload = False
     return get_video_image_source(
         get_youtube_stream_url(path, preferred_type=preferred_type, image_size=image_size),
         *args,
         image_size=image_size,
         download=download,
+        preload=preload,
         **kwargs
     )
 
