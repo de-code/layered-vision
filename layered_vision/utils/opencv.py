@@ -246,8 +246,9 @@ def get_youtube_video_image_source(
     preferred_type: str = 'mp4',
     **kwargs
 ) -> ContextManager[Iterable[ImageArray]]:
-    if not download:
-        preload = False
+    # no download support for youtube, also don't preload as those might be streams
+    download = False
+    preload = False
     return get_video_image_source(
         get_youtube_stream_url(path, preferred_type=preferred_type, image_size=image_size),
         *args,
