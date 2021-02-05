@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from contextlib import contextmanager
 from itertools import cycle
 from typing import ContextManager, Iterable
@@ -8,7 +9,11 @@ import cv2
 
 from .utils.image import resize_image_to, ImageSize, ImageArray, bgr_to_rgb
 from .utils.io import get_file, strip_url_suffix
-from .utils.opencv import get_video_image_source, get_webcam_image_source
+from .utils.opencv import (
+    get_video_image_source,
+    get_webcam_image_source,
+    get_youtube_video_image_source
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -53,6 +58,10 @@ def is_webcam_path(path: str) -> bool:
     return path.startswith('/dev/video')
 
 
+def is_youtube_path(path: str) -> bool:
+    return re.match(r'https?://([^/]*\.)?(youtu\.be|youtube\.com)/.*', path) is not None
+
+
 def is_video_path(path: str) -> bool:
     ext = os.path.splitext(os.path.basename(strip_url_suffix(path)))[-1]
     LOGGER.debug('ext: %s', ext)
@@ -62,6 +71,8 @@ def is_video_path(path: str) -> bool:
 def get_image_source_for_path(path: str, **kwargs) -> T_ImageSource:
     if is_webcam_path(path):
         return get_webcam_image_source(path, **kwargs)
+    if is_youtube_path(path):
+        return get_youtube_video_image_source(path, **kwargs)
     if is_video_path(path):
         return get_video_image_source(path, **kwargs)
     return get_simple_image_source(path, **kwargs)

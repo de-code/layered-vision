@@ -2,7 +2,7 @@ import logging
 from contextlib import contextmanager
 from itertools import cycle
 from time import time, sleep
-from typing import ContextManager, Iterable
+from typing import ContextManager, Iterable, List
 
 import cv2
 import numpy as np
@@ -116,12 +116,13 @@ def get_video_image_source(
     image_size: ImageSize = None,
     repeat: bool = False,
     preload: bool = False,
+    download: bool = True,
     fps: float = None,
     fourcc: str = None,
     buffer_size: int = None,
     **_
 ) -> ContextManager[Iterable[ImageArray]]:
-    local_path = get_file(path)
+    local_path = get_file(path, download=download)
     if local_path != path:
         LOGGER.info('loading video: %r (downloaded from %r)', local_path, path)
     else:
@@ -170,6 +171,87 @@ def get_webcam_image_source(
     if fourcc is None:
         fourcc = DEFAULT_WEBCAM_FOURCC
     return get_video_image_source(*args, fourcc=fourcc, buffer_size=buffer_size, **kwargs)
+
+
+def get_pafy_video(url: str) -> 'pafy.BasePafy':
+    # lazy import to make it optional
+    import pafy  # pylint: disable=import-outside-toplevel
+
+    return pafy.new(url)
+
+
+def get_best_matching_video_stream(
+    streams: List['pafy.BaseStream'],
+    preferred_type: str,
+    image_size: ImageSize = None
+) -> 'pafy.BaseStream':
+    streams_with_dimensions_difference = []
+    for stream in streams:
+        if not image_size:
+            error = 0
+        else:
+            stream_width, stream_height = stream.dimensions
+            error = (
+                abs(stream_width - image_size.width) ** 2
+                + abs(stream_height - image_size.height) ** 2
+            )
+        streams_with_dimensions_difference.append((error, stream,))
+
+    sorted_streams_with_dimensions_difference = sorted(streams_with_dimensions_difference)
+    for error, stream in sorted_streams_with_dimensions_difference:
+        if preferred_type and stream.extension != preferred_type:
+            LOGGER.debug(
+                'skipping stream with not prefeered type: %r (preferred: %r)',
+                stream.extension, preferred_type
+            )
+            continue
+        LOGGER.debug('choosing stream with error=%r (%r)', error, stream)
+        return stream
+    return None
+
+
+def get_youtube_stream_url(
+    url: str,
+    preferred_type: str,
+    image_size: ImageSize = None
+) -> str:
+    video = get_pafy_video(url)
+    LOGGER.info('found video (%r): %r', url, video.title)
+    LOGGER.info('available video streams: %s', [
+        '%s (%s)' % (stream.resolution, stream.extension)
+        for stream in video.streams
+    ])
+    stream = get_best_matching_video_stream(
+        video.streams,
+        preferred_type=preferred_type,
+        image_size=image_size
+    )
+    if not stream:
+        raise ValueError('no stream found for preferred_type=%r' % preferred_type)
+    LOGGER.info(
+        'video stream: %r (%s) (requested: %s)',
+        stream.resolution, stream.extension,
+        image_size
+    )
+    LOGGER.debug('video stream url: %r', stream.url)
+    return stream.url
+
+
+def get_youtube_video_image_source(
+    path: str,
+    *args,
+    image_size: ImageSize = None,
+    download: bool = False,
+    preferred_type: str = 'mp4',
+    **kwargs
+) -> ContextManager[Iterable[ImageArray]]:
+    return get_video_image_source(
+        get_youtube_stream_url(path, preferred_type=preferred_type, image_size=image_size),
+        *args,
+        image_size=image_size,
+        download=download,
+        **kwargs
+    )
 
 
 class ShowImageSink:
