@@ -29,7 +29,8 @@ when using this project as a library:
 | extra name | description
 | ---------- | -----------
 | bodypix    | For [bodypix](https://github.com/de-code/python-tf-bodypix) filter
-| webcam     | Virtual Webcam support via pyfakewebcam
+| webcam     | Virtual Webcam support via [pyfakewebcam](https://pypi.org/project/pyfakewebcam/)
+| youtube    | YouTube support via [pafy](https://pypi.org/project/pafy/) and [youtube_dl](https://pypi.org/project/youtube_dl/)
 | all        | All of the libraries
 
 ## Configuration

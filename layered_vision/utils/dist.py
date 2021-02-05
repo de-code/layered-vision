@@ -4,6 +4,10 @@ def get_requirement_groups(requirement):
         return ['bodypix']
     if 'pyfakewebcam' in requirement_lower:
         return ['webcam']
+    if 'pafy' in requirement_lower:
+        return ['youtube']
+    if 'youtube_dl' in requirement_lower:
+        return ['youtube']
     return [None]
 
 
