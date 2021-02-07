@@ -231,7 +231,6 @@ def iter_read_video_images(
         )
         if repeat:
             video_images = cycle(preloaded_video_images)
-        # return video_images
         return iter_delay_video_images_to_fps(video_images, fps)
     video_images = iter_read_raw_video_images(video_capture, repeat=repeat)
     video_images = iter_delay_video_images_to_fps(video_images, fps)
