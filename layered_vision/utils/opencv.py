@@ -91,7 +91,6 @@ class ReadLatestThreadedReader:
             try:
                 self.data_deque.append(next(self.iterable))
                 LOGGER.debug('read data')
-                # sleep(0.01)
             except StopIteration:
                 LOGGER.debug('end reached')
                 self.stopped_event.set()
@@ -178,35 +177,37 @@ def iter_delay_video_images_to_fps(
         return
     desired_frame_time = 1 / fps
     last_frame_time = None
-    skipped_count = 0
     frame_times = deque(maxlen=10)
     current_fps = 0
+    additional_frame_adjustment = 0
     end_frame_time = monotonic()
     while True:
         start_frame_time = end_frame_time
+        # attempt to retrieve the next frame (that may vary in time)
         try:
             image_array = next(video_images)
         except StopIteration:
             return
+        # wait time until delivery in order to achieve a similar fps
         current_time = monotonic()
         if last_frame_time:
-            desired_wait_time = desired_frame_time - (current_time - last_frame_time)
+            desired_wait_time = (
+                desired_frame_time
+                - (current_time - last_frame_time)
+                + additional_frame_adjustment
+            )
             if desired_wait_time > 0:
                 LOGGER.debug(
                     'sleeping for desired fps: %s (desired_frame_time: %s, fps: %.3f)',
                     desired_wait_time, desired_frame_time, current_fps
                 )
                 sleep(desired_wait_time)
-            elif desired_wait_time < -(1 + skipped_count):
-                if skipped_count < 10:
-                    LOGGER.debug('skipping frame (%s)', desired_wait_time)
-                    skipped_count += 1
-                    continue
-        yield image_array
-        skipped_count = 0
         last_frame_time = monotonic()
+        # emit the frame (post processing may add to the overall)
+        yield image_array
         end_frame_time = monotonic()
         frame_time = end_frame_time - start_frame_time
+        additional_frame_adjustment = desired_frame_time - frame_time
         frame_times.append(frame_time)
         current_fps = 1 / (sum(frame_times) / len(frame_times))
 
@@ -230,6 +231,7 @@ def iter_read_video_images(
         )
         if repeat:
             video_images = cycle(preloaded_video_images)
+        # return video_images
         return iter_delay_video_images_to_fps(video_images, fps)
     video_images = iter_read_raw_video_images(video_capture, repeat=repeat)
     video_images = iter_delay_video_images_to_fps(video_images, fps)
