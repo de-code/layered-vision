@@ -45,11 +45,18 @@ class WaitingDeque:
 
 
 class ReadLatestThreadedReader:
-    def __init__(self, iterable: Iterable[ImageArray], wait_for_data: bool = False):
+    def __init__(
+        self,
+        iterable: Iterable[ImageArray],
+        stopped_event: Event = None,
+        wait_for_data: bool = False
+    ):
         self.iterable = iterable
-        self.thread = Thread(target=self.read_all_loop, daemon=True)
+        self.thread = Thread(target=self.read_all_loop, daemon=False)
         self.data_deque = WaitingDeque(max_length=1)
-        self.stopped_event = Event()
+        if stopped_event is None:
+            stopped_event = Event()
+        self.stopped_event = stopped_event
         self.wait_for_data = wait_for_data
 
     def __enter__(self):
@@ -92,13 +99,15 @@ class ReadLatestThreadedReader:
                 self.data_deque.append(next(self.iterable))
                 LOGGER.debug('read data')
             except StopIteration:
-                LOGGER.debug('end reached')
+                LOGGER.info('read thread stopped, due to exhausted iterable')
                 self.stopped_event.set()
                 return
+        LOGGER.info('reader thread stopped, due to event')
+        self.stopped_event.set()
 
 
-def iter_read_threaded(iterable: Iterable[T]) -> Iterable[T]:
-    with ReadLatestThreadedReader(iterable) as reader:
+def iter_read_threaded(iterable: Iterable[T], **kwargs) -> Iterable[T]:
+    with ReadLatestThreadedReader(iterable, **kwargs) as reader:
         yield from reader
 
 
@@ -219,7 +228,8 @@ def iter_read_video_images(
     repeat: bool = False,
     preload: bool = False,
     read_in_thread: bool = True,
-    fps: float = None
+    fps: float = None,
+    stopped_event: Event = None
 ) -> Iterable[np.ndarray]:
     if preload:
         LOGGER.info('preloading video images')
@@ -235,7 +245,9 @@ def iter_read_video_images(
     video_images = iter_read_raw_video_images(video_capture, repeat=repeat)
     video_images = iter_delay_video_images_to_fps(video_images, fps)
     if read_in_thread:
-        video_images = iter_read_threaded(video_images)
+        video_images = iter_read_threaded(
+            video_images, stopped_event=stopped_event
+        )
     video_images = iter_resize_video_images(
         video_images, image_size=image_size, interpolation=interpolation
     )
@@ -253,6 +265,7 @@ def get_video_image_source(
     fps: float = None,
     fourcc: str = None,
     buffer_size: int = None,
+    stopped_event: Event = None,
     **_
 ) -> ContextManager[Iterable[ImageArray]]:
     local_path = get_file(path, download=download)
@@ -293,6 +306,7 @@ def get_video_image_source(
             repeat=repeat,
             preload=preload,
             fps=fps if fps is not None else actual_fps,
+            stopped_event=stopped_event
         )
     finally:
         LOGGER.debug('releasing video capture: %s', path)
