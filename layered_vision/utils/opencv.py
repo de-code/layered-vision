@@ -278,10 +278,14 @@ def get_video_image_source(
         height=video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
     )
     actual_fps = video_capture.get(cv2.CAP_PROP_FPS)
+    frame_count = video_capture.get(cv2.CAP_PROP_FRAME_COUNT)
     LOGGER.info(
-        'video reported image size: %s (%s fps)',
-        actual_image_size, actual_fps
+        'video reported image size: %s (%s fps, %s frames)',
+        actual_image_size, actual_fps, frame_count
     )
+    if preload and frame_count <= 0:
+        LOGGER.info('disabling preload for video source with unknown frame count')
+        preload = False
     try:
         yield iter_read_video_images(
             video_capture,
