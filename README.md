@@ -163,9 +163,12 @@ python -m layered_vision start \
   --config-file \
   "https://raw.githubusercontent.com/de-code/layered-vision/develop/example-config/webcam-bodypix-replace-background-to-v4l2loopback.yml" \
   --set bg.input_path="https://youtu.be/yswkqEBio2k" \
+  --set bg.fps=30 \
   --set in.input_path="/dev/video0" \
   --set out.output_path="/dev/video2"
 ```
+
+Note: you may need to specify the fps
 
 ### Docker Usage
 
