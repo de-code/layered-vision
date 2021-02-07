@@ -79,8 +79,8 @@ class ReadLatestThreadedReader:
             data = self.data_deque.peek()
             if data is not None:
                 return data
+            # wait for first frame (subsequent frames will always be available)
             sleep(0.01)
-        # return self.data_deque.pop(timeout=timeout)
 
     def pop(self, timeout: float = None) -> ImageArray:
         LOGGER.debug('waiting for data..')
