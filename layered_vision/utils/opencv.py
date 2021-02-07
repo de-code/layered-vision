@@ -231,8 +231,6 @@ def iter_read_video_images(
         if repeat:
             video_images = cycle(preloaded_video_images)
         return iter_delay_video_images_to_fps(video_images, fps)
-    if fps and fps > 30:
-        fps = 30
     video_images = iter_read_raw_video_images(video_capture, repeat=repeat)
     video_images = iter_delay_video_images_to_fps(video_images, fps)
     if read_in_thread:
