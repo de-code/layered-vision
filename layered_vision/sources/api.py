@@ -3,7 +3,7 @@ import os
 import re
 from contextlib import contextmanager
 from itertools import cycle
-from typing import ContextManager, Iterable
+from typing import ContextManager, Iterable, Tuple
 
 import cv2
 
@@ -20,6 +20,13 @@ LOGGER = logging.getLogger(__name__)
 
 
 T_ImageSource = ContextManager[Iterable[ImageArray]]
+
+
+class SourceTypes:
+    WEBCAM = 'webcam'
+    VIDEO = 'video'
+    YOUTUBE = 'youtube'
+    IMAGE = 'image'
 
 
 @contextmanager
@@ -68,11 +75,50 @@ def is_video_path(path: str) -> bool:
     return ext.lower() in {'.webm', '.mkv', '.mp4'}
 
 
-def get_image_source_for_path(path: str, **kwargs) -> T_ImageSource:
+def parse_source_type_path(path: str) -> Tuple[str, str]:
+    m = re.match(r'([a-z]+):(([^/]|/[^/]).*)', path)
+    if m:
+        return m.group(1), m.group(2)
+    return None, path
+
+
+def get_source_type_for_path(path: str) -> str:
     if is_webcam_path(path):
-        return get_webcam_image_source(path, **kwargs)
+        return SourceTypes.WEBCAM
     if is_youtube_path(path):
-        return get_youtube_video_image_source(path, **kwargs)
+        return SourceTypes.YOUTUBE
     if is_video_path(path):
+        return SourceTypes.VIDEO
+    return SourceTypes.IMAGE
+
+
+def get_source_type_and_path(path: str, **kwargs) -> Tuple[str, str]:
+    source_type = kwargs.get('type')
+    if source_type:
+        return source_type, path
+    source_type, path = parse_source_type_path(path)
+    if not source_type:
+        source_type = get_source_type_for_path(path)
+    return source_type, path
+
+
+def get_image_source_for_source_type_and_path(
+    source_type: str, path: str, **kwargs
+) -> T_ImageSource:
+    source_type, path = get_source_type_and_path(path, **kwargs)
+    if source_type == SourceTypes.WEBCAM:
+        return get_webcam_image_source(path, **kwargs)
+    if source_type == SourceTypes.YOUTUBE:
+        return get_youtube_video_image_source(path, **kwargs)
+    if source_type == SourceTypes.VIDEO:
         return get_video_image_source(path, **kwargs)
-    return get_simple_image_source(path, **kwargs)
+    if source_type == SourceTypes.IMAGE:
+        return get_simple_image_source(path, **kwargs)
+    raise ValueError('invalid source type: %r' % source_type)
+
+
+def get_image_source_for_path(path: str, **kwargs) -> T_ImageSource:
+    source_type, path = get_source_type_and_path(path, **kwargs)
+    return get_image_source_for_source_type_and_path(
+        source_type, path, **kwargs
+    )
