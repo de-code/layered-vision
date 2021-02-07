@@ -1,5 +1,6 @@
 import logging
 from contextlib import ExitStack
+from threading import Event
 from typing import ContextManager, Dict, Iterable, Optional, List
 
 from .utils.timer import LoggingTimer
@@ -32,16 +33,19 @@ class RuntimeContext:
     def __init__(
         self,
         timer: LoggingTimer,
-        preferred_image_size: ImageSize = None
+        preferred_image_size: ImageSize = None,
+        application_stopped_event: Event = None
     ):
         self.timer = timer
         self.preferred_image_size = preferred_image_size
         self.frame_cache = {}
+        self.application_stopped_event = application_stopped_event
 
 
 def get_image_source_for_layer_config(
     layer_config: LayerConfig,
-    preferred_image_size: Optional[ImageSize]
+    preferred_image_size: Optional[ImageSize],
+    stopped_event: Event
 ) -> ContextManager[Iterable[ImageArray]]:
     width = layer_config.get('width')
     height = layer_config.get('height')
@@ -55,7 +59,8 @@ def get_image_source_for_layer_config(
         repeat=layer_config.get('repeat'),
         preload=layer_config.get('preload'),
         fps=layer_config.get('fps'),
-        fourcc=layer_config.get('fourcc')
+        fourcc=layer_config.get('fourcc'),
+        stopped_event=stopped_event
     )
 
 
@@ -176,7 +181,8 @@ class RuntimeLayer:
             self.image_iterator = iter(self.exit_stack.enter_context(
                 get_image_source_for_layer_config(
                     self.layer_config,
-                    preferred_image_size=self.context.preferred_image_size
+                    preferred_image_size=self.context.preferred_image_size,
+                    stopped_event=self.context.application_stopped_event
                 )
             ))
         return self.image_iterator
@@ -297,8 +303,10 @@ class LayeredVisionApp:
         self.output_sink = None
         self.image_iterator = None
         self.output_runtime_layers = None
+        self.application_stopped_event = Event()
         self.context = RuntimeContext(
-            timer=self.timer
+            timer=self.timer,
+            application_stopped_event=self.application_stopped_event
         )
 
     def __enter__(self):
@@ -310,6 +318,7 @@ class LayeredVisionApp:
             raise exc
 
     def __exit__(self, *args, **kwargs):
+        self.application_stopped_event.set()
         self.exit_stack.__exit__(*args, **kwargs)
 
     def load(self):
@@ -370,3 +379,4 @@ class LayeredVisionApp:
                 pass
         except KeyboardInterrupt:
             LOGGER.info('exiting')
+            self.application_stopped_event.set()

@@ -38,7 +38,9 @@ def strip_url_suffix(path: str) -> str:
     return path
 
 
-def get_file(file_path: str) -> str:
+def get_file(file_path: str, download: bool = True) -> str:
+    if not download:
+        return file_path
     if os.path.exists(file_path):
         return file_path
     local_path = get_file_to(

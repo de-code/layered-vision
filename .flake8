@@ -1,2 +1,5 @@
 [flake8]
 max-line-length = 100
+ignore =
+    F821,  # undefined name, triggered on string type names
+    W503   # line break before binary operator
