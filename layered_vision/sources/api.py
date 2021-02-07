@@ -3,6 +3,7 @@ import os
 import re
 from contextlib import contextmanager
 from itertools import cycle
+from importlib import import_module
 from typing import ContextManager, Iterable, Tuple
 
 import cv2
@@ -11,8 +12,7 @@ from ..utils.image import resize_image_to, ImageSize, ImageArray, bgr_to_rgb
 from ..utils.io import get_file, strip_url_suffix
 from ..utils.opencv import (
     get_video_image_source,
-    get_webcam_image_source,
-    get_youtube_video_image_source
+    get_webcam_image_source
 )
 
 
@@ -105,8 +105,7 @@ def get_source_type_and_path(path: str, **kwargs) -> Tuple[str, str]:
 IMAGE_SOURCE_FACTORY_BY_TYPE = {
     SourceTypes.IMAGE: get_simple_image_source,
     SourceTypes.VIDEO: get_video_image_source,
-    SourceTypes.WEBCAM: get_webcam_image_source,
-    SourceTypes.YOUTUBE: get_youtube_video_image_source
+    SourceTypes.WEBCAM: get_webcam_image_source
 }
 
 
@@ -115,6 +114,10 @@ def get_image_source_for_source_type_and_path(
 ) -> T_ImageSource:
     source_type, path = get_source_type_and_path(path, **kwargs)
     image_source_factory = IMAGE_SOURCE_FACTORY_BY_TYPE.get(source_type)
+    if image_source_factory is None:
+        image_source_module = import_module('layered_vision.sources.%s' % source_type)
+        image_source_factory = image_source_module.IMAGE_SOURCE_FACTORY
+        IMAGE_SOURCE_FACTORY_BY_TYPE[source_type] = image_source_factory
     if image_source_factory is not None:
         return image_source_factory(path, **kwargs)
     raise ValueError('invalid source type: %r' % source_type)
