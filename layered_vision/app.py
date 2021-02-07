@@ -12,13 +12,13 @@ from .utils.image import (
     combine_images
 )
 
-from .sinks import (
+from .sinks.api import (
     T_OutputSink,
     get_image_output_sink_for_path
 )
 
 from .config import load_config, apply_config_override_map, LayerConfig
-from .sources import get_image_source_for_path, T_ImageSource
+from .sources.api import get_image_source_for_path, T_ImageSource
 from .filters.api import LayerFilter, create_filter
 
 

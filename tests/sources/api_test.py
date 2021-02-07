@@ -1,4 +1,7 @@
-from layered_vision.sources import is_youtube_path
+from layered_vision.sources.api import (
+    is_youtube_path,
+    parse_source_type_path
+)
 
 
 class TestIsYoutubePath:
@@ -13,3 +16,14 @@ class TestIsYoutubePath:
 
     def test_should_return_true_for_https_youtu_be_host(self):
         assert is_youtube_path('https://youtu.be/watch?v=12345') is True
+
+
+class TestParseSourceTypePath:
+    def test_should_should_parse_relative_video_path(self):
+        assert parse_source_type_path('video:relative/path') == ('video', 'relative/path')
+
+    def test_should_should_parse_absolute_video_path(self):
+        assert parse_source_type_path('video:/relative/path') == ('video', '/relative/path')
+
+    def test_should_should_parse_remote_video_url(self):
+        assert parse_source_type_path('video:https://host/path') == ('video', 'https://host/path')
