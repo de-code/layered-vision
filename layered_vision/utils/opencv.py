@@ -45,11 +45,12 @@ class WaitingDeque:
 
 
 class ReadLatestThreadedReader:
-    def __init__(self, iterable: Iterable[ImageArray]):
+    def __init__(self, iterable: Iterable[ImageArray], wait_for_data: bool = False):
         self.iterable = iterable
         self.thread = Thread(target=self.read_all_loop, daemon=True)
         self.data_deque = WaitingDeque(max_length=1)
         self.stopped_event = Event()
+        self.wait_for_data = wait_for_data
 
     def __enter__(self):
         self.start()
@@ -63,6 +64,8 @@ class ReadLatestThreadedReader:
         return self
 
     def __next__(self):
+        if self.wait_for_data:
+            return self.pop()
         return self.peek()
 
     def start(self):
