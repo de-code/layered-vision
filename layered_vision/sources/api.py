@@ -102,18 +102,21 @@ def get_source_type_and_path(path: str, **kwargs) -> Tuple[str, str]:
     return source_type, path
 
 
+IMAGE_SOURCE_FACTORY_BY_TYPE = {
+    SourceTypes.IMAGE: get_simple_image_source,
+    SourceTypes.VIDEO: get_video_image_source,
+    SourceTypes.WEBCAM: get_webcam_image_source,
+    SourceTypes.YOUTUBE: get_youtube_video_image_source
+}
+
+
 def get_image_source_for_source_type_and_path(
     source_type: str, path: str, **kwargs
 ) -> T_ImageSource:
     source_type, path = get_source_type_and_path(path, **kwargs)
-    if source_type == SourceTypes.WEBCAM:
-        return get_webcam_image_source(path, **kwargs)
-    if source_type == SourceTypes.YOUTUBE:
-        return get_youtube_video_image_source(path, **kwargs)
-    if source_type == SourceTypes.VIDEO:
-        return get_video_image_source(path, **kwargs)
-    if source_type == SourceTypes.IMAGE:
-        return get_simple_image_source(path, **kwargs)
+    image_source_factory = IMAGE_SOURCE_FACTORY_BY_TYPE.get(source_type)
+    if image_source_factory is not None:
+        return image_source_factory(path, **kwargs)
     raise ValueError('invalid source type: %r' % source_type)
 
 
