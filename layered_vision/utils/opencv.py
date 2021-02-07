@@ -1,8 +1,10 @@
 import logging
+from collections import deque
 from contextlib import contextmanager
 from itertools import cycle
-from time import time, sleep
-from typing import ContextManager, Iterable, List
+from time import monotonic, sleep
+from threading import Event, Thread
+from typing import Callable, ContextManager, Iterable, List, T
 
 import cv2
 import numpy as np
@@ -17,11 +19,93 @@ LOGGER = logging.getLogger(__name__)
 DEFAULT_WEBCAM_FOURCC = 'MJPG'
 
 
+class WaitingDeque:
+    def __init__(self, max_length: int):
+        self.deque = deque(maxlen=max_length)
+        self.changed_event = Event()
+
+    def append(self, data: T):
+        self.deque.append(data)
+        self.changed_event.set()
+
+    def peek(self, default_value: T = None) -> T:
+        try:
+            return self.deque[-1]
+        except IndexError:
+            return default_value
+
+    def pop(self, timeout: float = None) -> T:
+        self.changed_event.clear()
+        try:
+            return self.deque.pop()
+        except IndexError:
+            pass
+        self.changed_event.wait(timeout=timeout)
+        return self.deque.pop()
+
+
+class ReadLatestThreadedReader:
+    def __init__(self, iterable: Iterable[ImageArray]):
+        self.iterable = iterable
+        self.thread = Thread(target=self.read_all_loop, daemon=True)
+        self.data_deque = WaitingDeque(max_length=1)
+        self.stopped_event = Event()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *_, **__):
+        self.stop()
+        return False
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.peek()
+
+    def start(self):
+        self.thread.start()
+
+    def stop(self):
+        self.stopped_event.set()
+
+    def peek(self) -> ImageArray:
+        while not self.stopped_event.is_set():
+            data = self.data_deque.peek()
+            if data is not None:
+                return data
+            sleep(0.01)
+        # return self.data_deque.pop(timeout=timeout)
+
+    def pop(self, timeout: float = None) -> ImageArray:
+        LOGGER.debug('waiting for data..')
+        return self.data_deque.pop(timeout=timeout)
+
+    def read_all_loop(self):
+        while not self.stopped_event.is_set():
+            try:
+                self.data_deque.append(next(self.iterable))
+                LOGGER.debug('read data')
+                # sleep(0.01)
+            except StopIteration:
+                LOGGER.debug('end reached')
+                self.stopped_event.set()
+                return
+
+
+def iter_read_threaded(iterable: Iterable[T]) -> Iterable[T]:
+    with ReadLatestThreadedReader(iterable) as reader:
+        yield from reader
+
+
 def iter_read_raw_video_images(
     video_capture: cv2.VideoCapture,
-    repeat: bool = False
+    repeat: bool = False,
+    is_stopped: Callable[[], bool] = None
 ) -> Iterable[ImageArray]:
-    while True:
+    while is_stopped is None or not is_stopped():
         grabbed, image_array = video_capture.read()
         if not grabbed:
             LOGGER.info('video end reached')
@@ -33,6 +117,24 @@ def iter_read_raw_video_images(
                 LOGGER.info('unable to rewind video')
                 return
         yield image_array
+
+
+def iter_read_raw_video_images_threaded(
+    video_capture: cv2.VideoCapture,
+    repeat: bool = False,
+    is_stopped: Callable[[], bool] = None
+) -> Iterable[ImageArray]:
+    iterable = iter_read_raw_video_images(
+        video_capture=video_capture,
+        repeat=repeat,
+        is_stopped=is_stopped
+    )
+    fps = video_capture.get(cv2.CAP_PROP_FPS)
+    if fps:
+        LOGGER.info('fps: %s', fps)
+        iterable = iter_delay_video_images_to_fps(iterable, fps=fps)
+    with ReadLatestThreadedReader(iterable) as reader:
+        yield from reader
 
 
 def iter_resize_video_images(
@@ -73,15 +175,37 @@ def iter_delay_video_images_to_fps(
         return
     desired_frame_time = 1 / fps
     last_frame_time = None
-    for image_array in video_images:
-        current_time = time()
+    skipped_count = 0
+    frame_times = deque(maxlen=10)
+    current_fps = 0
+    end_frame_time = monotonic()
+    while True:
+        start_frame_time = end_frame_time
+        try:
+            image_array = next(video_images)
+        except StopIteration:
+            return
+        current_time = monotonic()
         if last_frame_time:
             desired_wait_time = desired_frame_time - (current_time - last_frame_time)
             if desired_wait_time > 0:
-                LOGGER.debug('sleeping for desired fps: %s', desired_wait_time)
+                LOGGER.debug(
+                    'sleeping for desired fps: %s (desired_frame_time: %s, fps: %.3f)',
+                    desired_wait_time, desired_frame_time, current_fps
+                )
                 sleep(desired_wait_time)
-        last_frame_time = time()
+            elif desired_wait_time < -(1 + skipped_count):
+                if skipped_count < 10:
+                    LOGGER.debug('skipping frame (%s)', desired_wait_time)
+                    skipped_count += 1
+                    continue
         yield image_array
+        skipped_count = 0
+        last_frame_time = monotonic()
+        end_frame_time = monotonic()
+        frame_time = end_frame_time - start_frame_time
+        frame_times.append(frame_time)
+        current_fps = 1 / (sum(frame_times) / len(frame_times))
 
 
 def iter_read_video_images(
@@ -90,6 +214,7 @@ def iter_read_video_images(
     interpolation: int = cv2.INTER_LINEAR,
     repeat: bool = False,
     preload: bool = False,
+    read_in_thread: bool = True,
     fps: float = None
 ) -> Iterable[np.ndarray]:
     if preload:
@@ -102,12 +227,18 @@ def iter_read_video_images(
         )
         if repeat:
             video_images = cycle(preloaded_video_images)
-    else:
-        video_images = iter_convert_video_images_to_rgb(iter_resize_video_images(
-            iter_read_raw_video_images(video_capture, repeat=repeat),
-            image_size=image_size, interpolation=interpolation
-        ))
-    return iter_delay_video_images_to_fps(video_images, fps)
+        return iter_delay_video_images_to_fps(video_images, fps)
+    if fps and fps > 30:
+        fps = 30
+    video_images = iter_read_raw_video_images(video_capture, repeat=repeat)
+    video_images = iter_delay_video_images_to_fps(video_images, fps)
+    if read_in_thread:
+        video_images = iter_read_threaded(video_images)
+    video_images = iter_resize_video_images(
+        video_images, image_size=image_size, interpolation=interpolation
+    )
+    video_images = iter_convert_video_images_to_rgb(video_images)
+    return video_images
 
 
 @contextmanager
@@ -243,6 +374,7 @@ def get_youtube_video_image_source(
     image_size: ImageSize = None,
     download: bool = False,
     preload: bool = False,
+    buffer_size: int = 20,
     preferred_type: str = 'mp4',
     **kwargs
 ) -> ContextManager[Iterable[ImageArray]]:
@@ -255,6 +387,7 @@ def get_youtube_video_image_source(
         image_size=image_size,
         download=download,
         preload=preload,
+        buffer_size=buffer_size,
         **kwargs
     )
 
