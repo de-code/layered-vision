@@ -42,11 +42,6 @@ def is_v4l2_path(path: str) -> bool:
     return path.startswith("/dev/video")
 
 
-def get_v4l2_output_sink(device_name: str) -> T_OutputSink:
-    from tf_bodypix.utils.v4l2 import VideoLoopbackImageSink
-    return VideoLoopbackImageSink(device_name)
-
-
 def get_show_image_output_sink(*_) -> T_OutputSink:
     return ShowImageSink('image')
 
@@ -78,7 +73,6 @@ def get_output_type_and_path(path: str, **kwargs) -> Tuple[str, str]:
 
 OUTPUT_SINK_FACTORY_BY_TYPE = {
     OutputTypes.WINDOW: get_show_image_output_sink,
-    OutputTypes.V4L2: get_v4l2_output_sink,
     OutputTypes.IMAGE_WRITER: get_image_file_output_sink
 }
 
@@ -89,7 +83,7 @@ def get_image_output_sink_for_output_type_and_path(
     sink_factory = OUTPUT_SINK_FACTORY_BY_TYPE.get(output_type)
     if sink_factory is None:
         sink_module = import_module('layered_vision.sinks.%s' % output_type)
-        sink_factory = sink_module.IMAGE_SINK_FACTORY
+        sink_factory = sink_module.OUTPUT_SINK_FACTORY
         OUTPUT_SINK_FACTORY_BY_TYPE[output_type] = sink_factory
     if sink_factory is not None:
         return sink_factory(path, **kwargs)
