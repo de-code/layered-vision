@@ -12,7 +12,7 @@ from .utils.image import (
     combine_images
 )
 
-from .sinks import (
+from .sinks.api import (
     T_OutputSink,
     get_image_output_sink_for_path
 )
