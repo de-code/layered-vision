@@ -1,8 +1,9 @@
 import argparse
 import logging
+import re
 import os
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = "3"
 
@@ -37,11 +38,24 @@ def add_common_arguments(parser: argparse.ArgumentParser):
     )
 
 
+def parse_value_expression(value_str: str) -> Union[str, int, float, bool]:
+    if value_str.lower() == 'false':
+        return False
+    if value_str.lower() == 'true':
+        return True
+    if re.match(r'^\d+$', value_str):
+        return int(value_str)
+    if re.match(r'^\d+\.\d+$', value_str):
+        return float(value_str)
+    return value_str
+
+
 def parse_set_value(text: str) -> Tuple[str, str]:
     try:
         key, value = text.split('=', maxsplit=1)
     except ValueError as exc:
         raise ValueError('value expected, format: <layer id>.<prop name>=<value>') from exc
+    value = parse_value_expression(value)
     try:
         layer_id, prop_name = key.split('.', maxsplit=1)
     except ValueError as exc:

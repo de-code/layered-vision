@@ -5,6 +5,7 @@ import cv2
 import pytest
 
 from layered_vision.cli import (
+    parse_value_expression,
     parse_set_value,
     get_merged_set_values,
     main
@@ -27,11 +28,35 @@ def _load_image(path: str):
     return image
 
 
+class TestParseValueExpression:
+    def test_should_parse_str(self):
+        assert parse_value_expression('abc') == 'abc'
+
+    def test_should_parse_int(self):
+        assert parse_value_expression('30') == 30
+
+    def test_should_parse_float(self):
+        assert parse_value_expression('30.1') == 30.1
+
+    def test_should_parse_false(self):
+        assert parse_value_expression('false') is False
+
+    def test_should_parse_true(self):
+        assert parse_value_expression('true') is True
+
+
 class TestParseSetValue:
     def test_should_parse_simple_expression(self):
         assert parse_set_value('in.input_path=/path/to/input') == {
             'in': {
                 'input_path': '/path/to/input'
+            }
+        }
+
+    def test_should_parse_int_value(self):
+        assert parse_set_value('in.fps=30') == {
+            'in': {
+                'fps': 30
             }
         }
 
