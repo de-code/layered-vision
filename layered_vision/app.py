@@ -18,7 +18,7 @@ from .sinks import (
 )
 
 from .config import load_config, apply_config_override_map, LayerConfig
-from .sources import get_image_source_for_path, T_ImageSource
+from .sources.api import get_image_source_for_path, T_ImageSource
 from .filters.api import LayerFilter, create_filter
 
 

@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from layered_vision.sources import get_image_source_for_path
+from layered_vision.sources.api import get_image_source_for_path
 from layered_vision.utils.image import ImageArray
 from layered_vision import app
 from layered_vision.cli import main

@@ -1,4 +1,4 @@
-from layered_vision.sources import is_youtube_path
+from layered_vision.sources.api import is_youtube_path
 
 
 class TestIsYoutubePath:

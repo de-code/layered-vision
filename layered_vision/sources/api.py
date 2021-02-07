@@ -7,9 +7,9 @@ from typing import ContextManager, Iterable
 
 import cv2
 
-from .utils.image import resize_image_to, ImageSize, ImageArray, bgr_to_rgb
-from .utils.io import get_file, strip_url_suffix
-from .utils.opencv import (
+from ..utils.image import resize_image_to, ImageSize, ImageArray, bgr_to_rgb
+from ..utils.io import get_file, strip_url_suffix
+from ..utils.opencv import (
     get_video_image_source,
     get_webcam_image_source,
     get_youtube_video_image_source
