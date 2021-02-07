@@ -1,8 +1,10 @@
-import os
 import logging
+import os
+import re
 from contextlib import contextmanager
 from functools import partial
-from typing import Callable
+from importlib import import_module
+from typing import Callable, Tuple
 
 import cv2
 
@@ -17,6 +19,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 T_OutputSink = Callable[[ImageArray], None]
+
+
+class OutputTypes:
+    WINDOW = 'window'
+    V4L2 = 'v4l2'
+    IMAGE_WRITER = 'image_writer'
 
 
 def write_image_to(image_array: ImageArray, path: str):
@@ -39,13 +47,57 @@ def get_v4l2_output_sink(device_name: str) -> T_OutputSink:
     return VideoLoopbackImageSink(device_name)
 
 
-def get_show_image_output_sink() -> T_OutputSink:
+def get_show_image_output_sink(*_) -> T_OutputSink:
     return ShowImageSink('image')
 
 
-def get_image_output_sink_for_path(path: str) -> T_OutputSink:
+def parse_output_type_path(path: str) -> Tuple[str, str]:
+    m = re.match(r'([a-z]+):(([^/]|/[^/]).*)', path)
+    if m:
+        return m.group(1), m.group(2)
+    return None, path
+
+
+def get_output_type_for_path(path: str) -> str:
     if path == 'window':
-        return get_show_image_output_sink()
+        return OutputTypes.WINDOW
     if is_v4l2_path(path):
-        return get_v4l2_output_sink(path)
-    return get_image_file_output_sink(path)
+        return OutputTypes.V4L2
+    return OutputTypes.IMAGE_WRITER
+
+
+def get_output_type_and_path(path: str, **kwargs) -> Tuple[str, str]:
+    output_type = kwargs.get('type')
+    if output_type:
+        return output_type, path
+    output_type, path = parse_output_type_path(path)
+    if not output_type:
+        output_type = get_output_type_for_path(path)
+    return output_type, path
+
+
+OUTPUT_SINK_FACTORY_BY_TYPE = {
+    OutputTypes.WINDOW: get_show_image_output_sink,
+    OutputTypes.V4L2: get_v4l2_output_sink,
+    OutputTypes.IMAGE_WRITER: get_image_file_output_sink
+}
+
+
+def get_image_output_sink_for_output_type_and_path(
+    output_type: str, path: str, **kwargs
+) -> T_OutputSink:
+    sink_factory = OUTPUT_SINK_FACTORY_BY_TYPE.get(output_type)
+    if sink_factory is None:
+        sink_module = import_module('layered_vision.sinks.%s' % output_type)
+        sink_factory = sink_module.IMAGE_SINK_FACTORY
+        OUTPUT_SINK_FACTORY_BY_TYPE[output_type] = sink_factory
+    if sink_factory is not None:
+        return sink_factory(path, **kwargs)
+    raise ValueError('invalid output type: %r' % output_type)
+
+
+def get_image_output_sink_for_path(path: str, **kwargs) -> T_OutputSink:
+    output_type, path = get_output_type_and_path(path, **kwargs)
+    return get_image_output_sink_for_output_type_and_path(
+        output_type, path, **kwargs
+    )

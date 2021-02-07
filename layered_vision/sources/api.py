@@ -112,7 +112,6 @@ IMAGE_SOURCE_FACTORY_BY_TYPE = {
 def get_image_source_for_source_type_and_path(
     source_type: str, path: str, **kwargs
 ) -> T_ImageSource:
-    source_type, path = get_source_type_and_path(path, **kwargs)
     image_source_factory = IMAGE_SOURCE_FACTORY_BY_TYPE.get(source_type)
     if image_source_factory is None:
         image_source_module = import_module('layered_vision.sources.%s' % source_type)
