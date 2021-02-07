@@ -33,6 +33,31 @@ when using this project as a library:
 | youtube    | YouTube support via [pafy](https://pypi.org/project/pafy/) and [youtube_dl](https://pypi.org/project/youtube_dl/)
 | all        | All of the libraries
 
+## Virtual Webcam For Linux
+
+You do not need to use a webcam to use the project, as you could feed a video file.
+But if you do want to use a webcam (currently only supported on Linux), this section provides a bit more information.
+
+On Linux, `/dev/video0` often refers to the true webcam device.
+
+You can use [v4l2loopback](https://github.com/umlaeute/v4l2loopback)
+to create a virtual webcam device. e.g. you could `/dev/video2`.
+
+Most applications looking for a webcam should then be able to use that virtual device.
+(Applications might include Chromium, Skype etc.)
+
+Once installed, you can create `/dev/video2` via the following command:
+
+```bash
+modprobe v4l2loopback devices=1 video_nr=2 exclusive_caps=1 card_label="VirtualCam 1"
+```
+
+To create the device after every reboot, you might want to create `/etc/modprobe.d/v4l2loopback.conf`:
+
+```text
+options v4l2loopback devices=1 video_nr=2 exclusive_caps=1 card_label="VirtualCam 1"
+```
+
 ## Configuration
 
 The configuration format is file is [YAML](https://en.wikipedia.org/wiki/YAML).
