@@ -12,9 +12,6 @@ from ..utils.image import ImageArray, rgb_to_bgr
 from ..utils.opencv import ShowImageSink
 
 
-# pylint: disable=import-outside-toplevel
-
-
 LOGGER = logging.getLogger(__name__)
 
 
