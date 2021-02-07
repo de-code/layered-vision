@@ -82,10 +82,12 @@ class ReadLatestThreadedReader:
         self.stopped_event.set()
 
     def peek(self) -> ImageArray:
-        while not self.stopped_event.is_set():
+        while True:
             data = self.data_deque.peek()
             if data is not None:
                 return data
+            if self.stopped_event.is_set():
+                return None
             # wait for first frame (subsequent frames will always be available)
             sleep(0.01)
 

@@ -1,3 +1,4 @@
+from time import sleep
 from typing import Tuple
 
 import pafy
@@ -5,6 +6,7 @@ import pafy
 from layered_vision.utils.image import ImageSize
 
 from layered_vision.utils.opencv import (
+    ReadLatestThreadedReader,
     get_best_matching_video_stream
 )
 
@@ -17,6 +19,16 @@ def get_pafy_stream(
     stream._dimensions = dimensions  # pylint: disable=protected-access
     stream._extension = extension  # pylint: disable=protected-access
     return stream
+
+
+class TestReadLatestThreadedReader:
+    def test_should_return_last_read_item(self):
+        data_list = ['abc', 'def']
+        with ReadLatestThreadedReader(iter(data_list)) as reader:
+            # adding delay so that it reads to the last item
+            sleep(0.01)
+            peeked_data = reader.peek()
+        assert peeked_data == data_list[-1]
 
 
 class TestGetBestMatchingVideoStream:
