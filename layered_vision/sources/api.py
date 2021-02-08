@@ -76,9 +76,9 @@ def is_video_path(path: str) -> bool:
 
 
 def parse_source_type_path(path: str) -> Tuple[str, str]:
-    m = re.match(r'([a-z]+):(([^/]|/[^/]).*)', path)
+    m = re.match(r'^([a-z]+)(:(([^/]|/[^/]).*|))?$', path)
     if m:
-        return m.group(1), m.group(2)
+        return m.group(1), m.group(3) or ''
     return None, path
 
 
