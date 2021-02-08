@@ -38,7 +38,7 @@ def get_mss_video_image_source(
     LOGGER.info('constructing mss with %r', init_params or {})
     with mss.mss(**(init_params or {})) as sct:
         grab_params = {
-            **sct.monitors[1],
+            **sct.monitors[grab_params.get('mon', 1)],
             **(grab_params or {})
         }
         LOGGER.info('mss grab_params: %r', grab_params)
