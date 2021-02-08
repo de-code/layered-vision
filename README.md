@@ -114,11 +114,18 @@ A layer that has an `input_path` property.
 
 The following inputs are currently supported:
 
-* Image
-* Video
-* Linux Webcam (`/dev/videoN`)
+| type name | description |
+| -----| ----------- |
+| image | Static image (e.g. `.png`) |
+| video | Video (e.g. `.mp4`) |
+| webcam | Linux Webcam (`/dev/videoN`) |
+| youtube | YouTube stream (e.g. `https://youtu.be/yswkqEBio2k`) |
+| mss | Screen capture using [mss](https://python-mss.readthedocs.io/index.html) (see [example config](https://github.com/de-code/layered-vision/tree/develop/example-config/display-video-bodypix-replace-background-mss)) |
 
 The `input_path` may point to a remote location (as is the case with [all examples](https://github.com/de-code/layered-vision/tree/develop/example-config)). In that case it will be downloaded and cached locally.
+
+In most cases the *type name* is inferred from the `input_path`.
+You can also specify the type explicitly via the `type` property or by prefixing the prefixing the path, e.g.: `webcam:/dev/video0`.
 
 ### Filter Layer
 
