@@ -9,7 +9,17 @@ layers:
     - layers:
       - id: bg
         # capture the screen using mss
+        # see https://python-mss.readthedocs.io/usage.html
+        # pass in parameters to mss.mss() as "init_params", and parameters to grab as "grab_params"
         input_path: "mss:"
+        # init_params:
+        #   display: ":0.0"
+        grab_params:
+          mon: 1
+          left: 0
+          top: 0
+          # width: 640
+          # height: 480
     - layers:
       - id: bodypix
         filter: bodypix
