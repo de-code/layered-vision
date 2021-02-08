@@ -53,14 +53,16 @@ def get_image_source_for_layer_config(
         image_size = ImageSize(width=width, height=height)
     else:
         image_size = preferred_image_size
+    source_kwargs = {
+        key: value
+        for key, value in layer_config.props.items()
+        if key not in {'id', 'input_path', 'width', 'height'}
+    }
     return get_image_source_for_path(
         layer_config.get('input_path'),
         image_size=image_size,
-        repeat=layer_config.get('repeat'),
-        preload=layer_config.get('preload'),
-        fps=layer_config.get('fps'),
-        fourcc=layer_config.get('fourcc'),
-        stopped_event=stopped_event
+        stopped_event=stopped_event,
+        **source_kwargs
     )
 
 
