@@ -56,7 +56,7 @@ def get_image_source_for_layer_config(
     source_kwargs = {
         key: value
         for key, value in layer_config.props.items()
-        if key not in {'id', 'input_path', 'width', 'height'}
+        if key not in {'id', 'input_path', 'width', 'height', 'type'}
     }
     return get_image_source_for_path(
         layer_config.get('input_path'),
