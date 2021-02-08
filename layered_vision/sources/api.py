@@ -8,6 +8,7 @@ from typing import ContextManager, Iterable, Tuple
 
 import cv2
 
+from ..utils.path import parse_type_path
 from ..utils.image import resize_image_to, ImageSize, ImageArray, bgr_to_rgb
 from ..utils.io import get_file, strip_url_suffix
 from ..utils.opencv import (
@@ -75,13 +76,6 @@ def is_video_path(path: str) -> bool:
     return ext.lower() in {'.webm', '.mkv', '.mp4'}
 
 
-def parse_source_type_path(path: str) -> Tuple[str, str]:
-    m = re.match(r'^([a-z]+)(:(([^/]|/[^/]).*|))?$', path)
-    if m:
-        return m.group(1), m.group(3) or ''
-    return None, path
-
-
 def get_source_type_for_path(path: str) -> str:
     if is_webcam_path(path):
         return SourceTypes.WEBCAM
@@ -96,7 +90,7 @@ def get_source_type_and_path(path: str, **kwargs) -> Tuple[str, str]:
     source_type = kwargs.get('type')
     if source_type:
         return source_type, path
-    source_type, path = parse_source_type_path(path)
+    source_type, path = parse_type_path(path)
     if not source_type:
         source_type = get_source_type_for_path(path)
     return source_type, path
