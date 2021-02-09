@@ -20,6 +20,14 @@ class LayerConfig:
     def get(self, key: str):
         return self.props.get(key)
 
+    def get_int(self, key: str, default_value: int = None):
+        value = self.get(key)
+        if value is None:
+            value = default_value
+        if isinstance(value, str):
+            value = int(value)
+        return value
+
     def __repr__(self):
         return '%s(props=%r)' % (
             type(self).__name__,

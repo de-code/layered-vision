@@ -156,6 +156,7 @@ The following filters are currently supported:
 | `copy` | Copies the input. Mainly useful as a placeholder layer with `branches`. |
 | `dilate` | Dilates the image or channel. For example to increase the alpha mask after using `erode` |
 | `erode` | Erodes the image or channel. That could be useful to remove outliers from an alpha mask. |
+| `bilateral` | Applies a [bilateral filter](https://en.wikipedia.org/wiki/Bilateral_filter), using `d`, `sigma_color` and `sigma_space` parameters. |
 | `motion_blur` | Adds a motion blur to the image or channel. That could be used to make an alpha mask move more slowly |
 | `pixelate` | Pixelates the input. |
 
