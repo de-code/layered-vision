@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Iterable, List, Union, Any
+from typing import Callable, Dict, Iterable, List, Union, Any, T
 
 import yaml
 
@@ -7,6 +7,28 @@ from .utils.io import read_text
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+def parse_bool(value: str) -> bool:
+    value_lower = value.lower()
+    if value_lower == 'false':
+        return False
+    if value_lower == 'true':
+        return True
+    raise ValueError('invalid boolean value: %r' % value)
+
+
+def get(props: dict, key: str, default_value: T = None, parse_fn: Callable[[str], T] = None) -> T:
+    value = props.get(key)
+    if value is None:
+        value = default_value
+    if parse_fn is not None and isinstance(value, str):
+        value = parse_fn(value)
+    return value
+
+
+def get_bool(props, key: str, default_value: bool = None):
+    return get(props, key, default_value, parse_bool)
 
 
 class LayerConfig:
@@ -17,16 +39,17 @@ class LayerConfig:
     def from_json(data: dict) -> 'LayerConfig':
         return LayerConfig(props=data)
 
-    def get(self, key: str):
-        return self.props.get(key)
+    def get(self, key: str, default_value: T = None, parse_fn: Callable[[str], T] = None) -> T:
+        return get(self.props, key, default_value, parse_fn)
+
+    def get_bool(self, key: str, default_value: bool = None):
+        return self.get(key, default_value, parse_bool)
 
     def get_int(self, key: str, default_value: int = None):
-        value = self.get(key)
-        if value is None:
-            value = default_value
-        if isinstance(value, str):
-            value = int(value)
-        return value
+        return self.get(key, default_value, int)
+
+    def get_float(self, key: str, default_value: float = None):
+        return self.get(key, default_value, float)
 
     def __repr__(self):
         return '%s(props=%r)' % (

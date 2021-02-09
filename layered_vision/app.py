@@ -25,7 +25,16 @@ from .filters.api import LayerFilter, create_filter
 LOGGER = logging.getLogger(__name__)
 
 
-CORE_LAYER_PROPS = {'id', 'input_path', 'output_path', 'filter', 'width', 'height', 'type'}
+CORE_LAYER_PROPS = {
+    'id',
+    'enabled',
+    'input_path',
+    'output_path',
+    'filter',
+    'width',
+    'height',
+    'type'
+}
 
 
 def get_custom_layer_props(layer_config: LayerConfig) -> dict:
@@ -219,6 +228,8 @@ class RuntimeLayer:
 
     def __next__(self):
         try:
+            if not self.is_enabled:
+                return next(self.source_layers[0])
             if self.is_filter_layer:
                 source_data = next(self.source_layers[0])
                 self.context.timer.on_step_start(self.layer_id)
@@ -246,6 +257,10 @@ class RuntimeLayer:
         image_array = apply_alpha(image_array)
         LOGGER.debug('output shape: %s', image_array.shape)
         self.get_output_sink()(image_array)
+
+    @property
+    def is_enabled(self) -> bool:
+        return self.layer_config.get_bool('enabled', True)
 
     @property
     def is_output_layer(self) -> bool:
@@ -349,7 +364,7 @@ class LayeredVisionApp:
         self.output_runtime_layers = [
             runtime_layer
             for runtime_layer in runtime_layers
-            if runtime_layer.is_output_layer
+            if runtime_layer.is_output_layer and runtime_layer.is_enabled
         ]
         for output_layer in self.output_runtime_layers:
             add_source_layers_recursively(runtime_layers, output_layer)

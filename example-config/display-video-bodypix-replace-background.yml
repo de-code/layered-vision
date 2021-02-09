@@ -29,15 +29,17 @@ layers:
         channel: alpha
         value: 19
       - id: blur
+        enabled: true
         filter: box_blur
         channel: alpha
         value: 10
-      # - id: bilateral
-      #   filter: bilateral
-      #   channel: alpha
-      #   d: 10
-      #   sigma_color: 10
-      #   sigma_space: 10
+      - id: bilateral
+        enabled: false
+        filter: bilateral
+        channel: alpha
+        d: 100
+        sigma_color: 100
+        sigma_space: 100
       - id: motion_blur
         filter: motion_blur
         channel: alpha
