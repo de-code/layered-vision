@@ -32,7 +32,10 @@ def get_best_matching_video_stream(
             )
         streams_with_dimensions_difference.append((error, stream,))
 
-    sorted_streams_with_dimensions_difference = sorted(streams_with_dimensions_difference)
+    sorted_streams_with_dimensions_difference = sorted(
+        streams_with_dimensions_difference,
+        key=lambda t: t[0]
+    )
     for error, stream in sorted_streams_with_dimensions_difference:
         if preferred_type and stream.extension != preferred_type:
             LOGGER.debug(

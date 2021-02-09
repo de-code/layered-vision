@@ -108,21 +108,43 @@ layers:
     output_path: window
 ```
 
-### Input Layer
+### Input Layer (Source)
 
 A layer that has an `input_path` property.
 
 The following inputs are currently supported:
 
-* Image
-* Video
-* Linux Webcam (`/dev/videoN`)
+| type name | description |
+| -----| ----------- |
+| image | Static image (e.g. `.png`) |
+| video | Video (e.g. `.mp4`) |
+| webcam | Linux Webcam (`/dev/videoN`) |
+| youtube | YouTube stream (e.g. `https://youtu.be/yswkqEBio2k`,  see [example config](https://github.com/de-code/layered-vision/tree/develop/example-config/display-video-bodypix-replace-background-youtube.yml)) |
+| mss | Screen capture using [mss](https://python-mss.readthedocs.io/index.html) (see [example config](https://github.com/de-code/layered-vision/tree/develop/example-config/display-video-bodypix-replace-background-mss.yml)) |
 
 The `input_path` may point to a remote location (as is the case with [all examples](https://github.com/de-code/layered-vision/tree/develop/example-config)). In that case it will be downloaded and cached locally.
 
+In most cases the *type name* is inferred from the `input_path`.
+You can also specify the type explicitly via the `type` property or by prefixing the path, e.g.: `webcam:/dev/video0`.
+
+### Output Layer (Sink)
+
+A layer that has an `output_path` property.
+
+The following outputs are currently supported:
+
+| type name | description |
+| -----| ----------- |
+| image_writer | Write to a static image (e.g. `.png`) |
+| v4l2 | Linux Virtual Webcam (`/dev/videoN`) |
+| window | Display a window |
+
+As is the case with the `input_path`, in most cases the *type name* is inferred from the `output_path`.
+You can also specify the type explicitly via the `type` property or by prefixing the path, e.g.: `v4l2:/dev/video2`.
+
 ### Filter Layer
 
-A layer that has an `filter` property.
+A layer that has a `filter` property.
 
 The following filters are currently supported:
 

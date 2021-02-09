@@ -46,3 +46,15 @@ class TestGetBestMatchingVideoStream:
             image_size=ImageSize(190, 190)
         )
         assert result == streams[2]
+
+    def test_should_not_fail_with_same_dimensions(self):
+        streams = [
+            get_pafy_stream(dimensions=(100, 100), extension='mp4'),
+            get_pafy_stream(dimensions=(100, 100), extension='other')
+        ]
+        result = get_best_matching_video_stream(
+            streams,
+            preferred_type='mp4',
+            image_size=ImageSize(190, 190)
+        )
+        assert result == streams[0]

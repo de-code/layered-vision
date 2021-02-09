@@ -1,6 +1,5 @@
 import logging
 import os
-import re
 from contextlib import contextmanager
 from functools import partial
 from importlib import import_module
@@ -8,6 +7,7 @@ from typing import Callable, Tuple
 
 import cv2
 
+from ..utils.path import parse_type_path
 from ..utils.image import ImageArray, rgb_to_bgr
 from ..utils.opencv import ShowImageSink
 
@@ -43,13 +43,6 @@ def get_show_image_output_sink(*_) -> T_OutputSink:
     return ShowImageSink('image')
 
 
-def parse_output_type_path(path: str) -> Tuple[str, str]:
-    m = re.match(r'([a-z]+):(([^/]|/[^/]).*)', path)
-    if m:
-        return m.group(1), m.group(2)
-    return None, path
-
-
 def get_output_type_for_path(path: str) -> str:
     if path == 'window':
         return OutputTypes.WINDOW
@@ -62,7 +55,7 @@ def get_output_type_and_path(path: str, **kwargs) -> Tuple[str, str]:
     output_type = kwargs.get('type')
     if output_type:
         return output_type, path
-    output_type, path = parse_output_type_path(path)
+    output_type, path = parse_type_path(path)
     if not output_type:
         output_type = get_output_type_for_path(path)
     return output_type, path

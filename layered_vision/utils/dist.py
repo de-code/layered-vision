@@ -8,6 +8,8 @@ def get_requirement_groups(requirement):
         return ['youtube']
     if 'youtube_dl' in requirement_lower:
         return ['youtube']
+    if 'mss' in requirement_lower:
+        return ['mss']
     return [None]
 
 

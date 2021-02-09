@@ -25,6 +25,17 @@ from .filters.api import LayerFilter, create_filter
 LOGGER = logging.getLogger(__name__)
 
 
+CORE_LAYER_PROPS = {'id', 'input_path', 'output_path', 'filter', 'width', 'height', 'type'}
+
+
+def get_custom_layer_props(layer_config: LayerConfig) -> dict:
+    return {
+        key: value
+        for key, value in layer_config.props.items()
+        if key not in CORE_LAYER_PROPS
+    }
+
+
 class LayerException(RuntimeError):
     pass
 
@@ -56,11 +67,8 @@ def get_image_source_for_layer_config(
     return get_image_source_for_path(
         layer_config.get('input_path'),
         image_size=image_size,
-        repeat=layer_config.get('repeat'),
-        preload=layer_config.get('preload'),
-        fps=layer_config.get('fps'),
-        fourcc=layer_config.get('fourcc'),
-        stopped_event=stopped_event
+        stopped_event=stopped_event,
+        **get_custom_layer_props(layer_config)
     )
 
 
@@ -192,7 +200,10 @@ class RuntimeLayer:
             raise RuntimeError('not an output layer: %r' % self)
         if self.output_sink is None:
             self.output_sink = self.exit_stack.enter_context(
-                get_image_output_sink_for_path(self.layer_config.get('output_path'))
+                get_image_output_sink_for_path(
+                    self.layer_config.get('output_path'),
+                    **get_custom_layer_props(self.layer_config)
+                )
             )
         return self.output_sink
 
