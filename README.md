@@ -119,8 +119,8 @@ The following inputs are currently supported:
 | image | Static image (e.g. `.png`) |
 | video | Video (e.g. `.mp4`) |
 | webcam | Linux Webcam (`/dev/videoN`) |
-| youtube | YouTube stream (e.g. `https://youtu.be/yswkqEBio2k`) |
-| mss | Screen capture using [mss](https://python-mss.readthedocs.io/index.html) (see [example config](https://github.com/de-code/layered-vision/tree/develop/example-config/display-video-bodypix-replace-background-mss)) |
+| youtube | YouTube stream (e.g. `https://youtu.be/yswkqEBio2k`,  see [example config](https://github.com/de-code/layered-vision/tree/develop/example-config/display-video-bodypix-replace-background-youtube.yml)) |
+| mss | Screen capture using [mss](https://python-mss.readthedocs.io/index.html) (see [example config](https://github.com/de-code/layered-vision/tree/develop/example-config/display-video-bodypix-replace-background-mss.yml)) |
 
 The `input_path` may point to a remote location (as is the case with [all examples](https://github.com/de-code/layered-vision/tree/develop/example-config)). In that case it will be downloaded and cached locally.
 
