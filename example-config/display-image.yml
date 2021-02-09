@@ -6,3 +6,4 @@ layers:
     repeat: true
   - id: out
     output_path: window
+    window_title: "Image"

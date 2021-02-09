@@ -21,3 +21,4 @@ layers:
         threshold: 50
   - id: out
     output_path: window
+    window_title: "Video Background replacement using Chroma Key Example"

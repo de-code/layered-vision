@@ -36,3 +36,4 @@ layers:
         decay: 0
   - id: out
     output_path: window
+    window_title: "Webcam Background Replacement Example"

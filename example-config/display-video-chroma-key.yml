@@ -12,3 +12,4 @@ layers:
     threshold: 50
   - id: out
     output_path: window
+    window_title: "Background masking using Chroma Key Example"

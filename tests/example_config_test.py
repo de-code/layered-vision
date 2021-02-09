@@ -38,7 +38,7 @@ class GetCapturingOutputSink:
     def last_sink(self):
         return self.sinks[-1]
 
-    def __call__(self, path: str):
+    def __call__(self, path: str, **__):
         self.sinks.append(CapturingOutputSink(
             **self.sink_kwargs
         ))
