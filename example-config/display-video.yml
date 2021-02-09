@@ -11,3 +11,4 @@ layers:
     preload: true
   - id: out
     output_path: window
+    window_title: "Display Video Example"

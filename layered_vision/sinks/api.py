@@ -31,7 +31,7 @@ def write_image_to(image_array: ImageArray, path: str):
 
 
 @contextmanager
-def get_image_file_output_sink(path: str) -> T_OutputSink:
+def get_image_file_output_sink(path: str, **__) -> T_OutputSink:
     yield partial(write_image_to, path=path)
 
 
@@ -39,8 +39,8 @@ def is_v4l2_path(path: str) -> bool:
     return path.startswith("/dev/video")
 
 
-def get_show_image_output_sink(*_) -> T_OutputSink:
-    return ShowImageSink('image')
+def get_show_image_output_sink(*_, window_title: str = 'image', **__) -> T_OutputSink:
+    return ShowImageSink(window_title)
 
 
 def get_output_type_for_path(path: str) -> str:

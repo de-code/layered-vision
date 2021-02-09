@@ -25,3 +25,4 @@ layers:
         value: 0.1
   - id: out
     output_path: window
+    window_title: "Pixelated Face Example"
