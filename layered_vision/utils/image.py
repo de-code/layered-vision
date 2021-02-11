@@ -92,6 +92,12 @@ def has_alpha(image: ImageArray) -> bool:
     return image.shape[-1] == 4
 
 
+def has_transparent_alpha(image: ImageArray) -> bool:
+    if not has_alpha(image):
+        return False
+    return np.any(image[:, :, 3] != 255)
+
+
 def apply_alpha(image: ImageArray) -> ImageArray:
     LOGGER.debug('apply_alpha, image: %s [%s]', image.shape, image.dtype)
     color_channels = image.shape[-1]

@@ -8,6 +8,7 @@ from .utils.image import (
     ImageArray,
     ImageSize,
     get_image_size,
+    has_transparent_alpha,
     apply_alpha,
     combine_images
 )
@@ -240,6 +241,10 @@ class RuntimeLayer:
             image_array = self.context.frame_cache.get(self.layer_id)
             if image_array is None:
                 image_array = next(self.get_image_iterator())
+                if has_transparent_alpha(image_array) and self.source_layers:
+                    source_image = next(self.source_layers[0])
+                    self.context.timer.on_step_start(self.layer_id + '.combine')
+                    image_array = combine_images([source_image] + [image_array])
                 self.context.frame_cache[self.layer_id] = image_array
             if self.context.preferred_image_size is None:
                 image_size = get_image_size(image_array)

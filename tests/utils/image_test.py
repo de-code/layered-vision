@@ -2,6 +2,8 @@ import numpy as np
 
 from layered_vision.utils.image import (
     ImageArray,
+    has_alpha,
+    has_transparent_alpha,
     get_image_with_alpha,
     combine_images
 )
@@ -19,6 +21,25 @@ def add_alpha_channel(image: ImageArray, alpha: float) -> ImageArray:
         image,
         (np.ones(image.shape[:-1]) * 255 * alpha).astype(np.uint8)
     )
+
+
+class TestHasAlpha:
+    def test_should_return_false_for_image_without_alpha_channel(self):
+        assert has_alpha(IMAGE_DATA_1) is False
+
+    def test_should_return_true_for_image_with_alpha_channel(self):
+        assert has_alpha(add_alpha_channel(IMAGE_DATA_1, 1.0)) is True
+
+
+class TestHasTransparentAlpha:
+    def test_should_return_false_for_image_without_alpha_channel(self):
+        assert not has_transparent_alpha(IMAGE_DATA_1)
+
+    def test_should_return_false_for_image_with_alpha_equal_to_one(self):
+        assert not has_transparent_alpha(add_alpha_channel(IMAGE_DATA_1, 1.0))
+
+    def test_should_return_true_for_image_with_alpha_less_than_one(self):
+        assert has_transparent_alpha(add_alpha_channel(IMAGE_DATA_1, 0.5))
 
 
 class TestCombineImages:
