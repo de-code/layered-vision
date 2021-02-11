@@ -1,5 +1,5 @@
 import logging
-from collections import namedtuple
+from collections import Counter, namedtuple
 from functools import reduce
 from typing import List
 
@@ -89,6 +89,10 @@ def get_image_with_alpha(image: ImageArray, alpha: ImageArray) -> ImageArray:
     raise ValueError('unsupported image')
 
 
+def has_alpha(image: ImageArray) -> bool:
+    return image.shape[-1] == 4
+
+
 def apply_alpha(image: ImageArray) -> ImageArray:
     LOGGER.debug('apply_alpha, image: %s [%s]', image.shape, image.dtype)
     color_channels = image.shape[-1]
@@ -115,11 +119,28 @@ def combine_two_images(image1: ImageArray, image2: ImageArray) -> ImageArray:
         # no output alpha
         image2_alpha = image2[:, :, 3:] / 255
         return image1 * (1 - image2_alpha) + image2[:, :, :3] * image2_alpha
-    raise ValueError('unsupported image')
+    raise ValueError('unsupported image (channels %d + %d)' % (
+        image1_color_channels, image2_color_channels
+    ))
 
 
 def combine_images(images: List[ImageArray]) -> ImageArray:
+    if not images:
+        return None
+    visible_images = []
+    for image in images:
+        if not has_alpha(image):
+            visible_images = []
+        visible_images.append(image)
+    if len(visible_images) <= 1:
+        # nothing to combine, return last image
+        return images[-1]
+    image_sizes = [get_image_size(image) for image in visible_images]
+    image_size_counter = Counter(image_sizes)
+    if len(image_size_counter) > 1:
+        raise ValueError('image sizes mismatch: %s' % image_sizes)
+    visible_images[0] = apply_alpha(visible_images[0])
     return reduce(
         combine_two_images,
-        images
+        visible_images
     )
