@@ -135,6 +135,7 @@ def combine_images(
 ) -> ImageArray:
     if not images:
         return None
+    LOGGER.debug('images shapes: %s', [image.shape for image in images])
     visible_images = []
     for image in images:
         if not has_alpha(image):
@@ -147,6 +148,7 @@ def combine_images(
     image_size_counter = Counter(image_sizes)
     if len(image_size_counter) > 1:
         raise ValueError('image sizes mismatch: %s' % image_sizes)
+    LOGGER.debug('visible_images shapes: %s', [image.shape for image in visible_images])
     visible_images[0] = apply_alpha(visible_images[0])
     combined_image = None
     for image2 in visible_images[1:]:
