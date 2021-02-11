@@ -35,6 +35,7 @@ CORE_LAYER_PROPS = {
     'filter',
     'width',
     'height',
+    'resize_like_id',
     'type'
 }
 
@@ -54,10 +55,12 @@ class LayerException(RuntimeError):
 class RuntimeContext:
     def __init__(
         self,
+        layer_by_id: Dict[str, 'RuntimeLayer'],
         timer: LoggingTimer,
         preferred_image_size: ImageSize = None,
         application_stopped_event: Event = None
     ):
+        self.layer_by_id = layer_by_id
         self.timer = timer
         self.preferred_image_size = preferred_image_size
         self.frame_cache = {}
@@ -205,10 +208,15 @@ class RuntimeLayer:
         if not self.is_input_layer:
             raise RuntimeError('not an input layer: %r' % self)
         if self.image_iterator is None:
+            preferred_image_size = self.context.preferred_image_size
+            resize_like_id = self.resize_like_id
+            if resize_like_id:
+                image = next(self.context.layer_by_id[resize_like_id])
+                preferred_image_size = get_image_size(image)
             self.image_iterator = iter(self.exit_stack.enter_context(
                 get_image_source_for_layer_config(
                     self.layer_config,
-                    preferred_image_size=self.context.preferred_image_size,
+                    preferred_image_size=preferred_image_size,
                     stopped_event=self.context.application_stopped_event
                 )
             ))
@@ -292,6 +300,10 @@ class RuntimeLayer:
     def is_filter_layer(self) -> bool:
         return bool(self.layer_config.props.get('filter'))
 
+    @property
+    def resize_like_id(self) -> str:
+        return self.layer_config.get('resize_like_id')
+
     def add_source_layer(self, source_layer: 'RuntimeLayer'):
         self.source_layers.append(source_layer)
         if self.branches:
@@ -337,6 +349,20 @@ def add_source_layers_recursively(
             )
 
 
+def add_layer_by_id_recursively(
+    layer_by_id: Dict[str, RuntimeLayer],
+    all_runtime_layers: List[RuntimeLayer]
+):
+    for layer in all_runtime_layers:
+        layer_by_id[layer.layer_id] = layer
+        if layer.branches:
+            for branch in layer.branches.branches:
+                add_layer_by_id_recursively(
+                    layer_by_id,
+                    branch.runtime_layers
+                )
+
+
 class LayeredVisionApp:
     def __init__(self, config_path: str, override_map: Dict[str, Dict[str, str]] = None):
         self.config_path = config_path
@@ -348,7 +374,9 @@ class LayeredVisionApp:
         self.image_iterator = None
         self.output_runtime_layers = None
         self.application_stopped_event = Event()
+        self.layer_by_id = {}
         self.context = RuntimeContext(
+            layer_by_id=self.layer_by_id,
             timer=self.timer,
             application_stopped_event=self.application_stopped_event
         )
@@ -379,6 +407,7 @@ class LayeredVisionApp:
             ))
             for layer_index, layer_config in enumerate(layers)
         ]
+        add_layer_by_id_recursively(self.layer_by_id, runtime_layers)
         self.output_runtime_layers = [
             runtime_layer
             for runtime_layer in runtime_layers
