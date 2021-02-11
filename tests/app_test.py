@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from layered_vision.app import LayeredVisionApp
 
 
@@ -30,7 +32,10 @@ class TestMain:
             assert len(app.output_runtime_layers[0].source_layers) == 1
             assert app.output_runtime_layers[0].source_layers[0].layer_id == 'in'
 
-    def test_should_ignore_extra_input(self, temp_dir: Path):
+    @pytest.mark.parametrize("no_source", (False, True))
+    def test_should_ignore_extra_input_depending_on_no_source(
+        self, temp_dir: Path, no_source: bool
+    ):
         input_path = temp_dir / 'input.png'
         output_path = temp_dir / 'output.png'
         config_file = temp_dir / 'config.yml'
@@ -41,11 +46,13 @@ class TestMain:
               input_path: {input_path}
             - id: in
               input_path: {input_path}
+              no_source: {no_source}
             - id: out
               output_path: {output_path}
             '''.format(
                 input_path=_quote_path(input_path),
-                output_path=_quote_path(output_path)
+                output_path=_quote_path(output_path),
+                no_source=no_source
             )
         )
         with LayeredVisionApp(str(config_file)) as app:
@@ -53,3 +60,7 @@ class TestMain:
             assert app.output_runtime_layers[0].layer_id == 'out'
             assert len(app.output_runtime_layers[0].source_layers) == 1
             assert app.output_runtime_layers[0].source_layers[0].layer_id == 'in'
+            if no_source:
+                assert not app.output_runtime_layers[0].source_layers[0].source_layers
+            else:
+                assert app.output_runtime_layers[0].source_layers[0].source_layers

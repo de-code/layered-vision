@@ -29,6 +29,7 @@ LOGGER = logging.getLogger(__name__)
 CORE_LAYER_PROPS = {
     'id',
     'enabled',
+    'no_source',
     'input_path',
     'output_path',
     'filter',
@@ -107,6 +108,13 @@ class RuntimeBranch:
     def __next__(self):
         return next(self.runtime_layers[-1])
 
+    @property
+    def is_enabled(self):
+        return any(
+            layer.is_enabled
+            for layer in self.runtime_layers
+        )
+
     def add_source_layer(self, source_layer: 'RuntimeLayer'):
         if not self.runtime_layers:
             return
@@ -144,6 +152,7 @@ class RuntimeBranches:
         branch_images = list(reversed([
             next(branch)
             for branch in reversed(self.branches)
+            if branch.is_enabled
         ]))
         self.context.timer.on_step_start('%s.combine' % self.layer_id)
         return combine_images(branch_images)
@@ -268,6 +277,10 @@ class RuntimeLayer:
         return self.layer_config.get_bool('enabled', True)
 
     @property
+    def is_no_source(self) -> bool:
+        return self.layer_config.get_bool('no_source', False)
+
+    @property
     def is_output_layer(self) -> bool:
         return bool(self.layer_config.props.get('output_path'))
 
@@ -308,7 +321,7 @@ def add_source_layers_recursively(
     )
     source_layer = all_runtime_layers[source_layer_index]
     target_layer.add_source_layer(source_layer)
-    if not source_layer.is_input_layer:
+    if not source_layer.is_no_source and source_layer_index > 0:
         add_source_layers_recursively(
             all_runtime_layers,
             source_layer
