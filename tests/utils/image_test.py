@@ -52,7 +52,19 @@ class TestCombineImages:
             IMAGE_DATA_1,
             add_alpha_channel(IMAGE_DATA_2, 0.5),
             add_alpha_channel(IMAGE_DATA_3, 0.5)
-        ]), (
+        ], fixed_alpha_enabled=True), (
+            (IMAGE_DATA_1 * 0.5 + IMAGE_DATA_2 * 0.5) * 0.5
+            + IMAGE_DATA_3 * 0.5
+        ), rtol=0.1)
+
+    def test_should_overlay_multiple_images_with_alpha_on_image_without_alpha_using_fixed_alpha(
+        self
+    ):
+        np.testing.assert_allclose(combine_images([
+            IMAGE_DATA_1,
+            add_alpha_channel(IMAGE_DATA_2, 0.5),
+            add_alpha_channel(IMAGE_DATA_3, 0.5)
+        ], fixed_alpha_enabled=True), (
             (IMAGE_DATA_1 * 0.5 + IMAGE_DATA_2 * 0.5) * 0.5
             + IMAGE_DATA_3 * 0.5
         ), rtol=0.1)

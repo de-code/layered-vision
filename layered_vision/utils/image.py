@@ -123,7 +123,10 @@ def combine_two_images(image1: ImageArray, image2: ImageArray) -> ImageArray:
     ))
 
 
-def combine_images(images: List[ImageArray]) -> ImageArray:
+def combine_images(
+    images: List[ImageArray],
+    fixed_alpha_enabled: bool = True
+) -> ImageArray:
     if not images:
         return None
     visible_images = []
@@ -141,7 +144,24 @@ def combine_images(images: List[ImageArray]) -> ImageArray:
     visible_images[0] = apply_alpha(visible_images[0])
     combined_image = None
     for image2 in visible_images[1:]:
-        image2_alpha = image2[:, :, 3:] / 255
+        image2_raw_alpha = image2[:, :, 3]
+        if fixed_alpha_enabled:
+            image2_fixed_alpha = image2_raw_alpha[0, 0]
+            if np.all(image2_fixed_alpha == image2_raw_alpha):
+                # shortcut for where the alpha channel has the same value
+                LOGGER.debug('same alpha: %s', image2_fixed_alpha)
+                image2_fixed_alpha /= 255
+                combined_image = cv2.addWeighted(
+                    src1=visible_images[0] if combined_image is None else combined_image,
+                    alpha=1 - image2_fixed_alpha,
+                    src2=image2[:, :, :3],
+                    beta=image2_fixed_alpha,
+                    gamma=0,
+                    dtype=3,
+                    dst=combined_image
+                )
+                continue
+        image2_alpha = np.expand_dims(image2_raw_alpha, -1) / 255
         if combined_image is not None:
             np.multiply(combined_image, 1 - image2_alpha, out=combined_image)
         else:
