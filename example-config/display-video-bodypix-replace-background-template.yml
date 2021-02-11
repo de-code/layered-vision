@@ -1,3 +1,5 @@
+canvas:
+  size_like_id: in
 layers:
   - id: in
     # Source: https://www.pexels.com/video/video-of-a-man-laughing-and-happy-1608393/
@@ -47,15 +49,14 @@ layers:
         channel: alpha
         frame_count: 3
         decay: 0
-    - layers:
-      - id: fg
-        enabled: false
-        # Source: https://purepng.com/photo/10277/clipart-glasses
-        input_path: "https://www.dropbox.com/s/yo0dzt1uxjjycqg/purepng.com-glassesglasseseyeglassesspectaclesplastic-lensesmounted-1421526499301tx3dl.png?dl=1"
-        width: 640
-        height: 360
-        repeat: true
-        preload: true
+  - id: fg
+    enabled: false
+    no_source: false
+    # Source: https://purepng.com/photo/10277/clipart-glasses
+    input_path: "https://www.dropbox.com/s/yo0dzt1uxjjycqg/purepng.com-glassesglasseseyeglassesspectaclesplastic-lensesmounted-1421526499301tx3dl.png?dl=1"
+    resize_like_id: in
+    repeat: true
+    preload: true
   - id: out
     output_path: window
     window_title: "Video Background Template Example"
