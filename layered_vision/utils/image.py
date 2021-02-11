@@ -1,6 +1,5 @@
 import logging
 from collections import Counter, namedtuple
-from functools import reduce
 from typing import List
 
 import cv2
@@ -140,7 +139,12 @@ def combine_images(images: List[ImageArray]) -> ImageArray:
     if len(image_size_counter) > 1:
         raise ValueError('image sizes mismatch: %s' % image_sizes)
     visible_images[0] = apply_alpha(visible_images[0])
-    return reduce(
-        combine_two_images,
-        visible_images
-    )
+    combined_image = None
+    for image2 in visible_images[1:]:
+        image2_alpha = image2[:, :, 3:] / 255
+        if combined_image is not None:
+            np.multiply(combined_image, 1 - image2_alpha, out=combined_image)
+        else:
+            combined_image = np.multiply(visible_images[0], 1 - image2_alpha)
+        np.add(combined_image, image2[:, :, :3] * image2_alpha, out=combined_image)
+    return combined_image
