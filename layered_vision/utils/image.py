@@ -1,6 +1,5 @@
 import logging
-from collections import namedtuple
-from functools import reduce
+from collections import Counter, namedtuple
 from typing import List
 
 import cv2
@@ -89,6 +88,16 @@ def get_image_with_alpha(image: ImageArray, alpha: ImageArray) -> ImageArray:
     raise ValueError('unsupported image')
 
 
+def has_alpha(image: ImageArray) -> bool:
+    return image.shape[-1] == 4
+
+
+def has_transparent_alpha(image: ImageArray) -> bool:
+    if not has_alpha(image):
+        return False
+    return np.any(image[:, :, 3] != 255)
+
+
 def apply_alpha(image: ImageArray) -> ImageArray:
     LOGGER.debug('apply_alpha, image: %s [%s]', image.shape, image.dtype)
     color_channels = image.shape[-1]
@@ -115,11 +124,55 @@ def combine_two_images(image1: ImageArray, image2: ImageArray) -> ImageArray:
         # no output alpha
         image2_alpha = image2[:, :, 3:] / 255
         return image1 * (1 - image2_alpha) + image2[:, :, :3] * image2_alpha
-    raise ValueError('unsupported image')
+    raise ValueError('unsupported image (channels %d + %d)' % (
+        image1_color_channels, image2_color_channels
+    ))
 
 
-def combine_images(images: List[ImageArray]) -> ImageArray:
-    return reduce(
-        combine_two_images,
-        images
-    )
+def combine_images(
+    images: List[ImageArray],
+    fixed_alpha_enabled: bool = True
+) -> ImageArray:
+    if not images:
+        return None
+    LOGGER.debug('images shapes: %s', [image.shape for image in images])
+    visible_images = []
+    for image in images:
+        if not has_alpha(image):
+            visible_images = []
+        visible_images.append(image)
+    if len(visible_images) <= 1:
+        # nothing to combine, return last image
+        return images[-1]
+    image_sizes = [get_image_size(image) for image in visible_images]
+    image_size_counter = Counter(image_sizes)
+    if len(image_size_counter) > 1:
+        raise ValueError('image sizes mismatch: %s' % image_sizes)
+    LOGGER.debug('visible_images shapes: %s', [image.shape for image in visible_images])
+    visible_images[0] = apply_alpha(visible_images[0])
+    combined_image = None
+    for image2 in visible_images[1:]:
+        image2_raw_alpha = image2[:, :, 3]
+        if fixed_alpha_enabled:
+            image2_fixed_alpha = image2_raw_alpha[0, 0]
+            if np.all(image2_fixed_alpha == image2_raw_alpha):
+                # shortcut for where the alpha channel has the same value
+                LOGGER.debug('same alpha: %s', image2_fixed_alpha)
+                image2_fixed_alpha /= 255
+                combined_image = cv2.addWeighted(
+                    src1=visible_images[0] if combined_image is None else combined_image,
+                    alpha=1 - image2_fixed_alpha,
+                    src2=image2[:, :, :3],
+                    beta=image2_fixed_alpha,
+                    gamma=0,
+                    dtype=3,
+                    dst=combined_image
+                )
+                continue
+        image2_alpha = np.expand_dims(image2_raw_alpha, -1) / 255
+        if combined_image is not None:
+            np.multiply(combined_image, 1 - image2_alpha, out=combined_image)
+        else:
+            combined_image = np.multiply(visible_images[0], 1 - image2_alpha)
+        np.add(combined_image, image2[:, :, :3] * image2_alpha, out=combined_image)
+    return combined_image

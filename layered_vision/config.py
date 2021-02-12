@@ -31,13 +31,9 @@ def get_bool(props, key: str, default_value: bool = None):
     return get(props, key, default_value, parse_bool)
 
 
-class LayerConfig:
+class PropsConfig:
     def __init__(self, props: dict):
         self.props = props
-
-    @staticmethod
-    def from_json(data: dict) -> 'LayerConfig':
-        return LayerConfig(props=data)
 
     def get(self, key: str, default_value: T = None, parse_fn: Callable[[str], T] = None) -> T:
         return get(self.props, key, default_value, parse_fn)
@@ -58,6 +54,12 @@ class LayerConfig:
         )
 
 
+class LayerConfig(PropsConfig):
+    @staticmethod
+    def from_json(data: dict) -> 'LayerConfig':
+        return LayerConfig(props=data)
+
+
 def _iter_find_nested_layer_props(parent: Union[dict, list, Any]) -> Iterable[dict]:
     if isinstance(parent, dict):
         for key, value in parent.items():
@@ -76,10 +78,12 @@ class AppConfig:
     @staticmethod
     def from_json(data: dict) -> 'AppConfig':
         LOGGER.debug('app config data: %r', data)
-        return AppConfig(layers=[
-            LayerConfig.from_json(layer_data)
-            for layer_data in data.get('layers', [])
-        ])
+        return AppConfig(
+            layers=[
+                LayerConfig.from_json(layer_data)
+                for layer_data in data.get('layers', [])
+            ]
+        )
 
     def iter_layers(self) -> Iterable[LayerConfig]:
         return self.layers

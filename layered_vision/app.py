@@ -8,6 +8,7 @@ from .utils.image import (
     ImageArray,
     ImageSize,
     get_image_size,
+    has_transparent_alpha,
     apply_alpha,
     combine_images
 )
@@ -28,11 +29,13 @@ LOGGER = logging.getLogger(__name__)
 CORE_LAYER_PROPS = {
     'id',
     'enabled',
+    'no_source',
     'input_path',
     'output_path',
     'filter',
     'width',
     'height',
+    'resize_like_id',
     'type'
 }
 
@@ -52,10 +55,12 @@ class LayerException(RuntimeError):
 class RuntimeContext:
     def __init__(
         self,
+        layer_by_id: Dict[str, 'RuntimeLayer'],
         timer: LoggingTimer,
         preferred_image_size: ImageSize = None,
         application_stopped_event: Event = None
     ):
+        self.layer_by_id = layer_by_id
         self.timer = timer
         self.preferred_image_size = preferred_image_size
         self.frame_cache = {}
@@ -106,6 +111,17 @@ class RuntimeBranch:
     def __next__(self):
         return next(self.runtime_layers[-1])
 
+    @property
+    def is_no_source(self):
+        return not self.runtime_layers or self.runtime_layers[0].is_no_source
+
+    @property
+    def is_enabled(self):
+        return any(
+            layer.is_enabled
+            for layer in self.runtime_layers
+        )
+
     def add_source_layer(self, source_layer: 'RuntimeLayer'):
         if not self.runtime_layers:
             return
@@ -143,13 +159,15 @@ class RuntimeBranches:
         branch_images = list(reversed([
             next(branch)
             for branch in reversed(self.branches)
+            if branch.is_enabled
         ]))
         self.context.timer.on_step_start('%s.combine' % self.layer_id)
         return combine_images(branch_images)
 
     def add_source_layer(self, source_layer: 'RuntimeLayer'):
         for branch in self.branches:
-            branch.add_source_layer(source_layer)
+            if not branch.is_no_source:
+                branch.add_source_layer(source_layer)
 
 
 class RuntimeLayer:
@@ -195,10 +213,15 @@ class RuntimeLayer:
         if not self.is_input_layer:
             raise RuntimeError('not an input layer: %r' % self)
         if self.image_iterator is None:
+            preferred_image_size = self.context.preferred_image_size
+            resize_like_id = self.resize_like_id
+            if resize_like_id:
+                image = next(self.context.layer_by_id[resize_like_id])
+                preferred_image_size = get_image_size(image)
             self.image_iterator = iter(self.exit_stack.enter_context(
                 get_image_source_for_layer_config(
                     self.layer_config,
-                    preferred_image_size=self.context.preferred_image_size,
+                    preferred_image_size=preferred_image_size,
                     stopped_event=self.context.application_stopped_event
                 )
             ))
@@ -240,6 +263,10 @@ class RuntimeLayer:
             image_array = self.context.frame_cache.get(self.layer_id)
             if image_array is None:
                 image_array = next(self.get_image_iterator())
+                if has_transparent_alpha(image_array) and self.source_layers:
+                    source_image = next(self.source_layers[0])
+                    self.context.timer.on_step_start(self.layer_id + '.combine')
+                    image_array = combine_images([source_image] + [image_array])
                 self.context.frame_cache[self.layer_id] = image_array
             if self.context.preferred_image_size is None:
                 image_size = get_image_size(image_array)
@@ -263,6 +290,10 @@ class RuntimeLayer:
         return self.layer_config.get_bool('enabled', True)
 
     @property
+    def is_no_source(self) -> bool:
+        return self.layer_config.get_bool('no_source', False)
+
+    @property
     def is_output_layer(self) -> bool:
         return bool(self.layer_config.props.get('output_path'))
 
@@ -273,6 +304,10 @@ class RuntimeLayer:
     @property
     def is_filter_layer(self) -> bool:
         return bool(self.layer_config.props.get('filter'))
+
+    @property
+    def resize_like_id(self) -> str:
+        return self.layer_config.get('resize_like_id')
 
     def add_source_layer(self, source_layer: 'RuntimeLayer'):
         self.source_layers.append(source_layer)
@@ -303,7 +338,7 @@ def add_source_layers_recursively(
     )
     source_layer = all_runtime_layers[source_layer_index]
     target_layer.add_source_layer(source_layer)
-    if not source_layer.is_input_layer:
+    if not source_layer.is_no_source and source_layer_index > 0:
         add_source_layers_recursively(
             all_runtime_layers,
             source_layer
@@ -313,10 +348,26 @@ def add_source_layers_recursively(
             if not branch.runtime_layers:
                 branch.runtime_layers = [source_layer]
                 continue
+            if branch.runtime_layers[0].is_no_source:
+                continue
             add_source_layers_recursively(
                 branch.runtime_layers,
                 branch.runtime_layers[-1]
             )
+
+
+def add_layer_by_id_recursively(
+    layer_by_id: Dict[str, RuntimeLayer],
+    all_runtime_layers: List[RuntimeLayer]
+):
+    for layer in all_runtime_layers:
+        layer_by_id[layer.layer_id] = layer
+        if layer.branches:
+            for branch in layer.branches.branches:
+                add_layer_by_id_recursively(
+                    layer_by_id,
+                    branch.runtime_layers
+                )
 
 
 class LayeredVisionApp:
@@ -330,7 +381,9 @@ class LayeredVisionApp:
         self.image_iterator = None
         self.output_runtime_layers = None
         self.application_stopped_event = Event()
+        self.layer_by_id = {}
         self.context = RuntimeContext(
+            layer_by_id=self.layer_by_id,
             timer=self.timer,
             application_stopped_event=self.application_stopped_event
         )
@@ -361,6 +414,7 @@ class LayeredVisionApp:
             ))
             for layer_index, layer_config in enumerate(layers)
         ]
+        add_layer_by_id_recursively(self.layer_by_id, runtime_layers)
         self.output_runtime_layers = [
             runtime_layer
             for runtime_layer in runtime_layers

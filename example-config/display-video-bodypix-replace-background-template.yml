@@ -1,0 +1,64 @@
+canvas:
+  size_like_id: in
+layers:
+  - id: in
+    # Source: https://www.pexels.com/video/video-of-a-man-laughing-and-happy-1608393/
+    input_path: "https://www.dropbox.com/s/s7jga3f0dreavlb/video-of-a-man-laughing-and-happy-1608393-360p.mp4?dl=1"
+    repeat: true
+    preload: true
+  - id: branches
+    branches:
+    - layers:
+      - id: bg
+        # Source: https://www.pexels.com/video/carnival-rides-operating-in-an-amusement-park-3031943/
+        input_path: "https://www.dropbox.com/s/oqftndbs29g8ekd/carnival-rides-operating-in-an-amusement-park-3031943-360p.mp4?dl=1"
+        repeat: true
+        preload: true
+    - layers:
+      - id: bg2
+        enabled: false
+        no_source: true
+    - layers:
+      - id: bodypix
+        filter: bodypix
+        model_path: "https://storage.googleapis.com/tfjs-models/savedmodel/bodypix/mobilenet/float/050/model-stride16.json"
+        # model_path: "https://storage.googleapis.com/tfjs-models/savedmodel/bodypix/resnet50/float/model-stride16.json"
+        internal_resolution: 0.5
+        threshold: 0.5
+        cache_model_result_secs: 0
+      - id: erode
+        filter: erode
+        channel: alpha
+        value: 20
+      - id: dilate
+        filter: dilate
+        channel: alpha
+        value: 19
+      - id: blur
+        enabled: true
+        filter: box_blur
+        channel: alpha
+        value: 10
+      - id: bilateral
+        enabled: false
+        filter: bilateral
+        channel: alpha
+        d: 100
+        sigma_color: 100
+        sigma_space: 100
+      - id: motion_blur
+        filter: motion_blur
+        channel: alpha
+        frame_count: 3
+        decay: 0
+  - id: fg
+    enabled: false
+    no_source: false
+    # Source: https://purepng.com/photo/10277/clipart-glasses
+    input_path: "https://www.dropbox.com/s/yo0dzt1uxjjycqg/purepng.com-glassesglasseseyeglassesspectaclesplastic-lensesmounted-1421526499301tx3dl.png?dl=1"
+    resize_like_id: in
+    repeat: true
+    preload: true
+  - id: out
+    output_path: window
+    window_title: "Video Background Template Example"
