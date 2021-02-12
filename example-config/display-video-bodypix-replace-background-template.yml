@@ -14,8 +14,10 @@ layers:
         input_path: "https://www.dropbox.com/s/oqftndbs29g8ekd/carnival-rides-operating-in-an-amusement-park-3031943-360p.mp4?dl=1"
         repeat: true
         preload: true
+    - layers:
       - id: bg2
         enabled: false
+        no_source: true
     - layers:
       - id: bodypix
         filter: bodypix

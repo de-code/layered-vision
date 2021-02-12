@@ -112,6 +112,10 @@ class RuntimeBranch:
         return next(self.runtime_layers[-1])
 
     @property
+    def is_no_source(self):
+        return not self.runtime_layers or self.runtime_layers[0].is_no_source
+
+    @property
     def is_enabled(self):
         return any(
             layer.is_enabled
@@ -162,7 +166,8 @@ class RuntimeBranches:
 
     def add_source_layer(self, source_layer: 'RuntimeLayer'):
         for branch in self.branches:
-            branch.add_source_layer(source_layer)
+            if not branch.is_no_source:
+                branch.add_source_layer(source_layer)
 
 
 class RuntimeLayer:
@@ -342,6 +347,8 @@ def add_source_layers_recursively(
         for branch in target_layer.branches.branches:
             if not branch.runtime_layers:
                 branch.runtime_layers = [source_layer]
+                continue
+            if branch.runtime_layers[0].is_no_source:
                 continue
             add_source_layers_recursively(
                 branch.runtime_layers,
