@@ -69,6 +69,7 @@ class ReadLatestThreadedReader:
         self.wait_for_data = wait_for_data
 
     def __enter__(self):
+        LOGGER.debug('starting reader thread')
         self.start()
         return self
 
@@ -239,8 +240,8 @@ def iter_read_video_images(
     interpolation: int = cv2.INTER_LINEAR,
     repeat: bool = False,
     preload: bool = False,
-    read_in_thread: bool = True,
     fps: float = None,
+    threading_enabled: bool = True,
     stopped_event: Event = None
 ) -> Iterable[np.ndarray]:
     video_images: Iterable[np.ndarray]
@@ -257,7 +258,7 @@ def iter_read_video_images(
         return iter_delay_video_images_to_fps(video_images, fps)
     video_images = iter_read_raw_video_images(video_capture, repeat=repeat)
     video_images = iter_delay_video_images_to_fps(video_images, fps)
-    if read_in_thread:
+    if threading_enabled:
         video_images = iter_read_threaded(
             video_images, stopped_event=stopped_event
         )
@@ -269,7 +270,7 @@ def iter_read_video_images(
 
 
 @contextmanager
-def get_video_image_source(
+def get_video_image_source(  # pylint: disable=too-many-locals
     path: str,
     image_size: ImageSize = None,
     repeat: bool = False,
@@ -278,6 +279,7 @@ def get_video_image_source(
     fps: float = None,
     fourcc: str = None,
     buffer_size: int = None,
+    threading_enabled: bool = True,
     stopped_event: Event = None,
     **_
 ) -> Iterator[Iterable[ImageArray]]:
@@ -313,12 +315,14 @@ def get_video_image_source(
         LOGGER.info('disabling preload for video source with unknown frame count')
         preload = False
     try:
+        LOGGER.debug('threading_enabled: %s', threading_enabled)
         yield iter_read_video_images(
             video_capture,
             image_size=image_size,
             repeat=repeat,
             preload=preload,
             fps=fps if fps is not None else actual_fps,
+            threading_enabled=threading_enabled,
             stopped_event=stopped_event
         )
     finally:
