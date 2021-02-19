@@ -3,13 +3,14 @@ import logging
 import re
 import os
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = "3"
 
 # pylint: disable=wrong-import-position
 # flake8: noqa: E402
 
+from layered_vision.config import T_Value
 from layered_vision.app import LayeredVisionApp
 
 
@@ -38,7 +39,7 @@ def add_common_arguments(parser: argparse.ArgumentParser):
     )
 
 
-def parse_value_expression(value_str: str) -> Union[str, int, float, bool]:
+def parse_value_expression(value_str: str) -> T_Value:
     if value_str.lower() == 'false':
         return False
     if value_str.lower() == 'true':
@@ -50,23 +51,25 @@ def parse_value_expression(value_str: str) -> Union[str, int, float, bool]:
     return value_str
 
 
-def parse_set_value(text: str) -> Tuple[str, str]:
+def parse_set_value(text: str) -> Dict[str, Dict[str, T_Value]]:
     try:
         key, value = text.split('=', maxsplit=1)
     except ValueError as exc:
         raise ValueError('value expected, format: <layer id>.<prop name>=<value>') from exc
-    value = parse_value_expression(value)
+    parsed_value = parse_value_expression(value)
     try:
         layer_id, prop_name = key.split('.', maxsplit=1)
     except ValueError as exc:
         raise ValueError('layer id expected, format: <layer id>.<prop name>=<value>') from exc
-    return {layer_id: {prop_name: value}}
+    return {layer_id: {prop_name: parsed_value}}
 
 
-def get_merged_set_values(set_values: List[Dict[str, Dict[str, str]]]) -> Dict[str, Dict[str, str]]:
+def get_merged_set_values(
+    set_values: List[Dict[str, Dict[str, T_Value]]]
+) -> Dict[str, Dict[str, T_Value]]:
     if not set_values:
         return {}
-    result = {}
+    result: Dict[str, Dict[str, T_Value]] = {}
     for set_value in set_values:
         for layer_id, props in set_value.items():
             for prop_name, value in props.items():

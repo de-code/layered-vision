@@ -1,6 +1,8 @@
 import logging
 from typing import ContextManager, Iterable, List
 
+import pafy
+
 from layered_vision.utils.image import ImageArray, ImageSize
 from layered_vision.utils.opencv import get_video_image_source
 
@@ -8,18 +10,15 @@ from layered_vision.utils.opencv import get_video_image_source
 LOGGER = logging.getLogger(__name__)
 
 
-def get_pafy_video(url: str) -> 'pafy.BasePafy':
-    # lazy import to make it optional
-    import pafy  # pylint: disable=import-outside-toplevel
-
+def get_pafy_video(url: str) -> pafy.backend_shared.BasePafy:
     return pafy.new(url)
 
 
 def get_best_matching_video_stream(
-    streams: List['pafy.backend_shared.BaseStream'],
+    streams: List[pafy.backend_shared.BaseStream],
     preferred_type: str,
     image_size: ImageSize = None
-) -> 'pafy.backend_shared.BaseStream':
+) -> pafy.backend_shared.BaseStream:
     streams_with_dimensions_difference = []
     for stream in streams:
         if not image_size:
@@ -77,7 +76,6 @@ def get_youtube_stream_url(
 
 def get_youtube_video_image_source(
     path: str,
-    *args,
     image_size: ImageSize = None,
     download: bool = False,
     preload: bool = False,
@@ -90,7 +88,6 @@ def get_youtube_video_image_source(
     preload = False
     return get_video_image_source(
         get_youtube_stream_url(path, preferred_type=preferred_type, image_size=image_size),
-        *args,
         image_size=image_size,
         download=download,
         preload=preload,

@@ -4,7 +4,13 @@ from contextlib import contextmanager
 from itertools import cycle
 from time import monotonic, sleep
 from threading import Event, Thread
-from typing import Callable, ContextManager, Iterable, T
+from typing import (
+    Callable, ContextManager, Deque, Iterable, Iterator,
+    Generic,
+    Optional,
+    TypeVar
+    # T
+)
 
 import cv2
 import numpy as np
@@ -19,16 +25,19 @@ LOGGER = logging.getLogger(__name__)
 DEFAULT_WEBCAM_FOURCC = 'MJPG'
 
 
-class WaitingDeque:
+T = TypeVar('T')
+
+
+class WaitingDeque(Generic[T]):
     def __init__(self, max_length: int):
-        self.deque = deque(maxlen=max_length)
+        self.deque: Deque[T] = deque(maxlen=max_length)
         self.changed_event = Event()
 
     def append(self, data: T):
         self.deque.append(data)
         self.changed_event.set()
 
-    def peek(self, default_value: T = None) -> T:
+    def peek(self, default_value: T = None) -> Optional[T]:
         try:
             return self.deque[-1]
         except IndexError:
@@ -48,12 +57,12 @@ class ReadLatestThreadedReader:
     def __init__(
         self,
         iterable: Iterable[ImageArray],
-        stopped_event: Event = None,
+        stopped_event: Optional[Event] = None,
         wait_for_data: bool = False
     ):
         self.iterable = iterable
         self.thread = Thread(target=self.read_all_loop, daemon=False)
-        self.data_deque = WaitingDeque(max_length=1)
+        self.data_deque = WaitingDeque[ImageArray](max_length=1)
         if stopped_event is None:
             stopped_event = Event()
         self.stopped_event = stopped_event
@@ -188,15 +197,16 @@ def iter_delay_video_images_to_fps(
         return
     desired_frame_time = 1 / fps
     last_frame_time = None
-    frame_times = deque(maxlen=10)
-    current_fps = 0
-    additional_frame_adjustment = 0
+    frame_times: Deque[float] = deque(maxlen=10)
+    current_fps = 0.0
+    additional_frame_adjustment = 0.0
     end_frame_time = monotonic()
+    video_images_iterator = iter(video_images)
     while True:
         start_frame_time = end_frame_time
         # attempt to retrieve the next frame (that may vary in time)
         try:
-            image_array = next(video_images)
+            image_array = next(video_images_iterator)
         except StopIteration:
             return
         # wait time until delivery in order to achieve a similar fps
@@ -233,6 +243,7 @@ def iter_read_video_images(
     fps: float = None,
     stopped_event: Event = None
 ) -> Iterable[np.ndarray]:
+    video_images: Iterable[np.ndarray]
     if preload:
         LOGGER.info('preloading video images')
         preloaded_video_images = list(
@@ -269,7 +280,7 @@ def get_video_image_source(
     buffer_size: int = None,
     stopped_event: Event = None,
     **_
-) -> ContextManager[Iterable[ImageArray]]:
+) -> Iterator[Iterable[ImageArray]]:
     local_path = get_file(path, download=download)
     if local_path != path:
         LOGGER.info('loading video: %r (downloaded from %r)', local_path, path)
@@ -316,14 +327,14 @@ def get_video_image_source(
 
 
 def get_webcam_image_source(
-    *args,
+    path: str,
     fourcc: str = None,
     buffer_size: int = 1,
     **kwargs
 ) -> ContextManager[Iterable[ImageArray]]:
     if fourcc is None:
         fourcc = DEFAULT_WEBCAM_FOURCC
-    return get_video_image_source(*args, fourcc=fourcc, buffer_size=buffer_size, **kwargs)
+    return get_video_image_source(path, fourcc=fourcc, buffer_size=buffer_size, **kwargs)
 
 
 class ShowImageSink:

@@ -29,18 +29,18 @@ class LayerFilter(ABC):
 
 
 class AbstractLayerFilter(LayerFilter):
-    def __init__(self, layer_config: dict, **__):
+    def __init__(self, layer_config: LayerConfig, **__):
         self.layer_config = layer_config
 
 
 class ChromaKeyFilter(AbstractLayerFilter):
-    def __init__(self, layer_config: dict, **kwargs):
+    def __init__(self, layer_config: LayerConfig, **kwargs):
         self.rgb_key = (
-            int(layer_config.get('red') or '0'),
-            int(layer_config.get('green') or '0'),
-            int(layer_config.get('blue') or '0')
+            layer_config.get_int('red', 0),
+            layer_config.get_int('green', 0),
+            layer_config.get_int('blue', 0)
         )
-        self.threshold = int(layer_config.get('threshold') or '0')
+        self.threshold = layer_config.get_int('threshold') or 0
         LOGGER.info('chroma key: %s', self.rgb_key)
         super().__init__(layer_config, **kwargs)
 
@@ -49,7 +49,7 @@ class ChromaKeyFilter(AbstractLayerFilter):
             mask = np.all(image_array[:, :, :3] != self.rgb_key, axis=-1).astype(np.uint8) * 255
         else:
             mask = (
-                np.mean(np.abs(image_array[:, :, :3] - self.rgb_key), axis=-1)
+                np.mean(np.abs(np.asarray(image_array)[:, :, :3] - self.rgb_key), axis=-1)
                 > self.threshold
             ).astype(np.uint8) * 255
         LOGGER.debug('mask.shape: %s', mask.shape)
@@ -68,7 +68,7 @@ CHANNEL_NAMES = ['red', 'green', 'blue', 'alpha']
 class AbstractOptionalChannelFilter(AbstractLayerFilter):
     def __init__(self, layer_config: LayerConfig, **kwargs):
         super().__init__(layer_config, **kwargs)
-        self.channel = layer_config.get('channel')
+        self.channel = layer_config.get_str('channel')
         try:
             self.channel_index = CHANNEL_NAMES.index(self.channel) if self.channel else None
         except IndexError as exc:
@@ -107,24 +107,24 @@ class AbstractOptionalChannelFilter(AbstractLayerFilter):
 
 class BoxBlurFilter(AbstractOptionalChannelFilter):
     def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
-        return box_blur_image(image_array, int(self.layer_config.get('value')))
+        return box_blur_image(image_array, self.layer_config.get_int('value'))
 
 
 class ErodeFilter(AbstractOptionalChannelFilter):
     def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
-        return erode_image(image_array, int(self.layer_config.get('value')))
+        return erode_image(image_array, self.layer_config.get_int('value'))
 
 
 class DilateFilter(AbstractOptionalChannelFilter):
     def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
-        return dilate_image(image_array, int(self.layer_config.get('value')))
+        return dilate_image(image_array, self.layer_config.get_int('value'))
 
 
 class MotionBlur(AbstractOptionalChannelFilter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.frame_count = int(self.layer_config.get('frame_count') or 0)
-        self.decay = float(self.layer_config.get('decay') or 0)
+        self.frame_count = self.layer_config.get_int('frame_count') or 0
+        self.decay = self.layer_config.get_float('decay') or 0.0
         self._frames = []
 
     def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
@@ -153,7 +153,7 @@ class MotionBlur(AbstractOptionalChannelFilter):
 class PixelateFilter(AbstractOptionalChannelFilter):
     def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
         image_size = get_image_size(image_array)
-        resolution = float(self.layer_config.get('value') or 0.1)
+        resolution = self.layer_config.get_float('value') or 0.1
         target_image_size = ImageSize(
             width=max(1, int(image_size.width * resolution)),
             height=max(1, int(image_size.height * resolution))
@@ -184,12 +184,13 @@ FILTER_CLASS_BY_NAME_MAP = {
 def create_filter(
     layer_config: LayerConfig
 ) -> LayerFilter:
-    filter_name = layer_config.get('filter')
+    filter_name = layer_config.get_str('filter')
     filter_class = FILTER_CLASS_BY_NAME_MAP.get(filter_name)
     if not filter_class:
         filter_module = import_module('layered_vision.filters.%s' % filter_name)
-        filter_class = filter_module.FILTER_CLASS
-        FILTER_CLASS_BY_NAME_MAP[filter_name] = filter_class
+        _filter_class = getattr(filter_module, 'FILTER_CLASS')
+        filter_class = _filter_class
+        FILTER_CLASS_BY_NAME_MAP[filter_name] = _filter_class
     if filter_class:
         return filter_class(layer_config)
     raise RuntimeError('unrecognised filter: %r' % filter_name)

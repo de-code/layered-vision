@@ -1,6 +1,6 @@
 import logging
 from collections import Counter, namedtuple
-from typing import List
+from typing import Any, List, Tuple, Union
 
 import cv2
 import numpy as np
@@ -11,7 +11,16 @@ LOGGER = logging.getLogger(__name__)
 
 ImageSize = namedtuple('ImageSize', ('height', 'width'))
 
-ImageArray = np.ndarray
+
+class SimpleImageArray:
+    shape: Tuple[int, ...]
+    dtype: Any
+
+    def __getitem__(self, *args) -> Union['SimpleImageArray', int, float]:
+        pass
+
+
+ImageArray = Union[np.ndarray, SimpleImageArray]
 
 
 def get_image_size(image: ImageArray):
@@ -122,6 +131,8 @@ def combine_two_images(image1: ImageArray, image2: ImageArray) -> ImageArray:
         return image2
     if image1_color_channels == 3:
         # no output alpha
+        image1 = np.asarray(image1)
+        image2 = np.asarray(image2)
         image2_alpha = image2[:, :, 3:] / 255
         return image1 * (1 - image2_alpha) + image2[:, :, :3] * image2_alpha
     raise ValueError('unsupported image (channels %d + %d)' % (
@@ -136,7 +147,7 @@ def combine_images(
     if not images:
         return None
     LOGGER.debug('images shapes: %s', [image.shape for image in images])
-    visible_images = []
+    visible_images: List[ImageArray] = []
     for image in images:
         if not has_alpha(image):
             visible_images = []
@@ -152,6 +163,7 @@ def combine_images(
     visible_images[0] = apply_alpha(visible_images[0])
     combined_image = None
     for image2 in visible_images[1:]:
+        image2 = np.asarray(image2)
         image2_raw_alpha = image2[:, :, 3]
         if fixed_alpha_enabled:
             image2_fixed_alpha = image2_raw_alpha[0, 0]

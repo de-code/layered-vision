@@ -1,11 +1,12 @@
 from pathlib import Path
+from typing import Union
 
 import pytest
 
 from layered_vision.app import LayeredVisionApp
 
 
-def _quote_path(path: str) -> str:
+def _quote_path(path: Union[str, Path]) -> str:
     return repr(str(path))
 
 
