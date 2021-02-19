@@ -1,6 +1,6 @@
 import logging
 from time import time
-from typing import List
+from typing import Dict, List, Optional
 
 
 LOGGER = logging.getLogger(__name__)
@@ -15,13 +15,13 @@ def _mean(a: List[float]) -> float:
 class LoggingTimer:
     def __init__(self, min_interval: float = 1):
         self.min_interval = min_interval
-        self.interval_start_time = None
-        self.frame_start_time = None
-        self.frame_durations = []
-        self.step_durations_map = {}
-        self.current_step_name = None
-        self.current_step_start_time = None
-        self.ordered_step_names = []
+        self.interval_start_time: Optional[float] = None
+        self.frame_start_time: Optional[float] = None
+        self.frame_durations: List[float] = []
+        self.step_durations_map: Dict[str, List[float]] = {}
+        self.current_step_name: Optional[str] = None
+        self.current_step_start_time: Optional[float] = None
+        self.ordered_step_names: List[str] = []
 
     def start(self):
         current_time = time()
@@ -32,13 +32,15 @@ class LoggingTimer:
             return
         if current_time is None:
             current_time = time()
+        assert self.current_step_start_time
         duration = current_time - self.current_step_start_time
         if duration > 0 or self.current_step_name:
-            self.step_durations_map.setdefault(self.current_step_name, []).append(
+            _current_step_name = self.current_step_name or '?'
+            self.step_durations_map.setdefault(_current_step_name, []).append(
                 duration
             )
-            if self.current_step_name not in self.ordered_step_names:
-                self.ordered_step_names.append(self.current_step_name)
+            if _current_step_name not in self.ordered_step_names:
+                self.ordered_step_names.append(_current_step_name)
             self.current_step_name = step_name
         self.current_step_start_time = current_time
 
@@ -62,6 +64,7 @@ class LoggingTimer:
         self.check_log(frame_end_time)
 
     def check_log(self, current_time: float):
+        assert self.interval_start_time
         interval_duration = current_time - self.interval_start_time
         if self.frame_durations and interval_duration >= self.min_interval:
             step_info = ', '.join([

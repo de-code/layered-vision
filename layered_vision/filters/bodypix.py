@@ -1,5 +1,6 @@
 import logging
 from time import time
+from typing import List, Optional
 
 import numpy as np
 
@@ -22,20 +23,20 @@ class BodyPixFilter(AbstractLayerFilter):
     def __init__(self, layer_config: LayerConfig, **kwargs):
         super().__init__(layer_config, **kwargs)
         self.model_path = (
-            layer_config.get('model_path')
+            layer_config.get_str('model_path')
             or BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_16
         )
         self._bodypix_model = None
-        self.threshold = float(layer_config.get('threshold') or 0.50)
-        self.internal_resolution = float(layer_config.get('internal_resolution') or 0.50)
-        self.cache_model_result_secs = float(
-            layer_config.get('cache_model_result_secs') or 0.0
+        self.threshold = layer_config.get_float('threshold') or 0.50
+        self.internal_resolution = layer_config.get_float('internal_resolution') or 0.50
+        self.cache_model_result_secs = (
+            layer_config.get_float('cache_model_result_secs') or 0.0
         )
-        self.parts = list(
-            layer_config.get('parts') or []
+        self.parts: List[str] = list(
+            layer_config.get_str_list('parts') or []
         )
         self._bodypix_result_cache = None
-        self._bodypix_result_cache_time = None
+        self._bodypix_result_cache_time: Optional[float] = None
 
     def load_bodypix_model(self) -> BodyPixModelWrapper:
         LOGGER.info('loading bodypix model: %s', self.model_path)

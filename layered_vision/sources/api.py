@@ -4,7 +4,7 @@ import re
 from contextlib import contextmanager
 from itertools import cycle
 from importlib import import_module
-from typing import ContextManager, Iterable, Tuple
+from typing import Callable, ContextManager, Dict, Iterable, Iterator, Tuple
 
 import cv2
 
@@ -20,7 +20,9 @@ from ..utils.opencv import (
 LOGGER = logging.getLogger(__name__)
 
 
-T_ImageSource = ContextManager[Iterable[ImageArray]]
+T_ImageSource = Iterable[ImageArray]
+
+T_ImageSourceFactory = Callable[..., ContextManager[T_ImageSource]]
 
 
 class SourceTypes:
@@ -36,7 +38,7 @@ def get_simple_image_source(
     image_size: ImageSize = None,
     repeat: bool = None,
     **_
-) -> T_ImageSource:
+) -> Iterator[T_ImageSource]:
     local_image_path = get_file(path)
     LOGGER.debug('local_image_path: %r', local_image_path)
     bgr_image_array = cv2.imread(local_image_path, cv2.IMREAD_UNCHANGED)
@@ -56,7 +58,7 @@ def get_simple_image_source(
         rgb_image_array.shape, rgb_image_array.dtype,
         image_array.shape, image_array.dtype
     )
-    image_array_iterable = [image_array]
+    image_array_iterable: T_ImageSource = [image_array]
     if repeat:
         image_array_iterable = cycle(image_array_iterable)
     yield image_array_iterable
@@ -96,7 +98,7 @@ def get_source_type_and_path(path: str, **kwargs) -> Tuple[str, str]:
     return source_type, path
 
 
-IMAGE_SOURCE_FACTORY_BY_TYPE = {
+IMAGE_SOURCE_FACTORY_BY_TYPE: Dict[str, T_ImageSourceFactory] = {
     SourceTypes.IMAGE: get_simple_image_source,
     SourceTypes.VIDEO: get_video_image_source,
     SourceTypes.WEBCAM: get_webcam_image_source
@@ -105,18 +107,18 @@ IMAGE_SOURCE_FACTORY_BY_TYPE = {
 
 def get_image_source_for_source_type_and_path(
     source_type: str, path: str, **kwargs
-) -> T_ImageSource:
+) -> ContextManager[T_ImageSource]:
     image_source_factory = IMAGE_SOURCE_FACTORY_BY_TYPE.get(source_type)
     if image_source_factory is None:
         image_source_module = import_module('layered_vision.sources.%s' % source_type)
-        image_source_factory = image_source_module.IMAGE_SOURCE_FACTORY
+        image_source_factory = getattr(image_source_module, 'IMAGE_SOURCE_FACTORY')
         IMAGE_SOURCE_FACTORY_BY_TYPE[source_type] = image_source_factory
     if image_source_factory is not None:
         return image_source_factory(path, **kwargs)
     raise ValueError('invalid source type: %r' % source_type)
 
 
-def get_image_source_for_path(path: str, **kwargs) -> T_ImageSource:
+def get_image_source_for_path(path: str, **kwargs) -> ContextManager[T_ImageSource]:
     source_type, path = get_source_type_and_path(path, **kwargs)
     return get_image_source_for_source_type_and_path(
         source_type, path, **kwargs

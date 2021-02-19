@@ -3,7 +3,7 @@ import os
 from contextlib import contextmanager
 from functools import partial
 from importlib import import_module
-from typing import Callable, Tuple
+from typing import Callable, ContextManager, Dict, Iterator, Tuple
 
 import cv2
 
@@ -16,6 +16,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 T_OutputSink = Callable[[ImageArray], None]
+
+T_OutputSinkFactory = Callable[..., ContextManager[T_OutputSink]]
 
 
 class OutputTypes:
@@ -31,7 +33,7 @@ def write_image_to(image_array: ImageArray, path: str):
 
 
 @contextmanager
-def get_image_file_output_sink(path: str, **__) -> T_OutputSink:
+def get_image_file_output_sink(path: str, **__) -> Iterator[T_OutputSink]:
     yield partial(write_image_to, path=path)
 
 
@@ -39,7 +41,9 @@ def is_v4l2_path(path: str) -> bool:
     return path.startswith("/dev/video")
 
 
-def get_show_image_output_sink(*_, window_title: str = 'image', **__) -> T_OutputSink:
+def get_show_image_output_sink(
+    *_, window_title: str = 'image', **__
+) -> ContextManager[T_OutputSink]:
     return ShowImageSink(window_title)
 
 
@@ -61,7 +65,7 @@ def get_output_type_and_path(path: str, **kwargs) -> Tuple[str, str]:
     return output_type, path
 
 
-OUTPUT_SINK_FACTORY_BY_TYPE = {
+OUTPUT_SINK_FACTORY_BY_TYPE: Dict[str, T_OutputSinkFactory] = {
     OutputTypes.WINDOW: get_show_image_output_sink,
     OutputTypes.IMAGE_WRITER: get_image_file_output_sink
 }
@@ -69,18 +73,18 @@ OUTPUT_SINK_FACTORY_BY_TYPE = {
 
 def get_image_output_sink_for_output_type_and_path(
     output_type: str, path: str, **kwargs
-) -> T_OutputSink:
+) -> ContextManager[T_OutputSink]:
     sink_factory = OUTPUT_SINK_FACTORY_BY_TYPE.get(output_type)
     if sink_factory is None:
         sink_module = import_module('layered_vision.sinks.%s' % output_type)
-        sink_factory = sink_module.OUTPUT_SINK_FACTORY
+        sink_factory = getattr(sink_module, 'OUTPUT_SINK_FACTORY')
         OUTPUT_SINK_FACTORY_BY_TYPE[output_type] = sink_factory
     if sink_factory is not None:
         return sink_factory(path, **kwargs)
     raise ValueError('invalid output type: %r' % output_type)
 
 
-def get_image_output_sink_for_path(path: str, **kwargs) -> T_OutputSink:
+def get_image_output_sink_for_path(path: str, **kwargs) -> ContextManager[T_OutputSink]:
     output_type, path = get_output_type_and_path(path, **kwargs)
     return get_image_output_sink_for_output_type_and_path(
         output_type, path, **kwargs

@@ -18,7 +18,7 @@ from .sinks.api import (
     get_image_output_sink_for_path
 )
 
-from .config import load_config, apply_config_override_map, LayerConfig
+from .config import load_config, apply_config_override_map, LayerConfig, T_Value
 from .sources.api import get_image_source_for_path, T_ImageSource
 from .filters.api import LayerFilter, create_filter
 
@@ -63,23 +63,24 @@ class RuntimeContext:
         self.layer_by_id = layer_by_id
         self.timer = timer
         self.preferred_image_size = preferred_image_size
-        self.frame_cache = {}
+        self.frame_cache: dict = {}
         self.application_stopped_event = application_stopped_event
 
 
 def get_image_source_for_layer_config(
     layer_config: LayerConfig,
     preferred_image_size: Optional[ImageSize],
-    stopped_event: Event
+    stopped_event: Optional[Event]
 ) -> ContextManager[Iterable[ImageArray]]:
-    width = layer_config.get('width')
-    height = layer_config.get('height')
+    width = layer_config.get_int('width')
+    height = layer_config.get_int('height')
+    image_size: Optional[ImageSize]
     if width and height:
         image_size = ImageSize(width=width, height=height)
     else:
         image_size = preferred_image_size
     return get_image_source_for_path(
-        layer_config.get('input_path'),
+        layer_config.get_str('input_path'),
         image_size=image_size,
         stopped_event=stopped_event,
         **get_custom_layer_props(layer_config)
@@ -141,10 +142,10 @@ class RuntimeBranches:
 
     @staticmethod
     def from_config(
-        branches_config: dict,
+        branches_config: List[dict],
         layer_id: str,
         context: RuntimeContext
-    ) -> 'RuntimeBranch':
+    ) -> 'RuntimeBranches':
         LOGGER.debug('branches_config: %s', branches_config)
         return RuntimeBranches([
             RuntimeBranch.from_config(
@@ -184,12 +185,12 @@ class RuntimeLayer:
         self.layer_id = layer_id
         self.exit_stack = ExitStack()
         self.source_layers = (source_layers or []).copy()
-        self.image_iterator = None
-        self.output_sink = None
-        self.filter = None
+        self.image_iterator: Optional[T_ImageSource] = None
+        self.output_sink: Optional[T_OutputSink] = None
+        self.filter: Optional[LayerFilter] = None
         self.context = context
         self.branches = None
-        branches_config = layer_config.get('branches')
+        branches_config: Optional[List[dict]] = layer_config.get_list('branches')
         if branches_config:
             self.branches = RuntimeBranches.from_config(
                 branches_config,
@@ -212,28 +213,32 @@ class RuntimeLayer:
     def get_image_iterator(self) -> T_ImageSource:
         if not self.is_input_layer:
             raise RuntimeError('not an input layer: %r' % self)
-        if self.image_iterator is None:
-            preferred_image_size = self.context.preferred_image_size
-            resize_like_id = self.resize_like_id
-            if resize_like_id:
-                image = next(self.context.layer_by_id[resize_like_id])
-                preferred_image_size = get_image_size(image)
-            self.image_iterator = iter(self.exit_stack.enter_context(
-                get_image_source_for_layer_config(
-                    self.layer_config,
-                    preferred_image_size=preferred_image_size,
-                    stopped_event=self.context.application_stopped_event
-                )
-            ))
-        return self.image_iterator
+        if self.image_iterator is not None:
+            return self.image_iterator
+        preferred_image_size = self.context.preferred_image_size
+        resize_like_id = self.resize_like_id
+        if resize_like_id:
+            image = next(self.context.layer_by_id[resize_like_id])
+            preferred_image_size = get_image_size(image)
+        _image_iterator = iter(self.exit_stack.enter_context(
+            get_image_source_for_layer_config(
+                self.layer_config,
+                preferred_image_size=preferred_image_size,
+                stopped_event=self.context.application_stopped_event
+            )
+        ))
+        self.image_iterator = _image_iterator
+        return _image_iterator
 
     def get_output_sink(self) -> T_OutputSink:
         if not self.is_output_layer:
             raise RuntimeError('not an output layer: %r' % self)
+        output_path = self.layer_config.get_str('output_path')
+        assert output_path, "output_path required"
         if self.output_sink is None:
             self.output_sink = self.exit_stack.enter_context(
                 get_image_output_sink_for_path(
-                    self.layer_config.get('output_path'),
+                    output_path,
                     **get_custom_layer_props(self.layer_config)
                 )
             )
@@ -244,10 +249,14 @@ class RuntimeLayer:
             return self.filter
         if not self.is_filter_layer:
             raise RuntimeError('not an output layer')
-        self.filter = create_filter(
+        _filter = create_filter(
             self.layer_config
         )
-        return self.filter
+        self.filter = _filter
+        return _filter
+
+    def __iter__(self):
+        return self
 
     def __next__(self):
         try:
@@ -306,8 +315,8 @@ class RuntimeLayer:
         return bool(self.layer_config.props.get('filter'))
 
     @property
-    def resize_like_id(self) -> str:
-        return self.layer_config.get('resize_like_id')
+    def resize_like_id(self) -> Optional[str]:
+        return self.layer_config.get_str('resize_like_id')
 
     def add_source_layer(self, source_layer: 'RuntimeLayer'):
         self.source_layers.append(source_layer)
@@ -371,7 +380,7 @@ def add_layer_by_id_recursively(
 
 
 class LayeredVisionApp:
-    def __init__(self, config_path: str, override_map: Dict[str, Dict[str, str]] = None):
+    def __init__(self, config_path: str, override_map: Dict[str, Dict[str, T_Value]] = None):
         self.config_path = config_path
         self.override_map = override_map
         self.exit_stack = ExitStack()
@@ -381,7 +390,7 @@ class LayeredVisionApp:
         self.image_iterator = None
         self.output_runtime_layers = None
         self.application_stopped_event = Event()
-        self.layer_by_id = {}
+        self.layer_by_id: Dict[str, RuntimeLayer] = {}
         self.context = RuntimeContext(
             layer_by_id=self.layer_by_id,
             timer=self.timer,
@@ -409,7 +418,7 @@ class LayeredVisionApp:
         runtime_layers = [
             self.exit_stack.enter_context(RuntimeLayer(
                 layer_index, layer_config,
-                layer_id=layer_config.get('id') or 'l%d' % layer_index,
+                layer_id=layer_config.get_str('id') or 'l%d' % layer_index,
                 context=self.context
             ))
             for layer_index, layer_config in enumerate(layers)

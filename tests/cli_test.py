@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Union
 
 import cv2
 
@@ -17,11 +18,11 @@ EXAMPLE_IMAGE_URL = (
 )
 
 
-def _quote_path(path: str) -> str:
+def _quote_path(path: Union[str, Path]) -> str:
     return repr(str(path))
 
 
-def _load_image(path: str):
+def _load_image(path: Union[str, Path]):
     image = cv2.imread(str(path))
     if image is None:
         raise FileNotFoundError('failed to load image: %r' % path)

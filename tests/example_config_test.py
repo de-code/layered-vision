@@ -1,5 +1,6 @@
 from pathlib import Path
 from unittest.mock import patch
+from typing import List
 
 import pytest
 
@@ -14,7 +15,7 @@ EXAMPLE_CONFIG_DIR = './example-config'
 
 class CapturingOutputSink:
     def __init__(self, limit: int = 1):
-        self.images = []
+        self.images: List[ImageArray] = []
         self.limit = limit
 
     def __enter__(self):

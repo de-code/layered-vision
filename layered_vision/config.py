@@ -1,5 +1,7 @@
 import logging
-from typing import Callable, Dict, Iterable, List, Union, Any, T
+from typing import (
+    Callable, Dict, Iterable, List, Optional, Union, Any, TypeVar, Type
+)
 
 import yaml
 
@@ -7,6 +9,10 @@ from .utils.io import read_text
 
 
 LOGGER = logging.getLogger(__name__)
+
+T = TypeVar('T')
+
+T_Value = Union[str, int, float, bool]
 
 
 def parse_bool(value: str) -> bool:
@@ -18,34 +24,95 @@ def parse_bool(value: str) -> bool:
     raise ValueError('invalid boolean value: %r' % value)
 
 
-def get(props: dict, key: str, default_value: T = None, parse_fn: Callable[[str], T] = None) -> T:
+def parse_str_list(value: str) -> List[str]:
+    value = value.strip()
+    if not value:
+        return []
+    return [item.strip() for item in value.split(',')]
+
+
+def get(
+    props: dict,
+    key: str,
+    default_value: Any = None
+) -> Optional[Any]:
     value = props.get(key)
-    if value is None:
-        value = default_value
+    if value is None and default_value is not None:
+        return default_value
+    return value
+
+
+def get_typed(
+    props: dict,
+    key: str,
+    value_type: Type[T],
+    default_value: T = None,
+    parse_fn: Callable[[str], T] = None
+) -> Optional[T]:
+    value = props.get(key)
+    if value is None and default_value is not None:
+        return default_value
     if parse_fn is not None and isinstance(value, str):
-        value = parse_fn(value)
+        return parse_fn(value)
+    if value is not None and not isinstance(value, value_type):
+        return value_type(value)  # type: ignore[call-arg]
     return value
 
 
 def get_bool(props, key: str, default_value: bool = None):
-    return get(props, key, default_value, parse_bool)
+    return get_typed(props, key, bool, default_value, parse_bool)
 
 
 class PropsConfig:
     def __init__(self, props: dict):
         self.props = props
 
-    def get(self, key: str, default_value: T = None, parse_fn: Callable[[str], T] = None) -> T:
-        return get(self.props, key, default_value, parse_fn)
+    def get(self, key: str, default_value: T = None) -> Optional[T]:
+        return get(self.props, key, default_value)
+
+    def get_typed(
+        self,
+        key: str,
+        value_type: Type[T],
+        default_value: T = None,
+        parse_fn: Callable[[str], T] = None
+    ) -> Optional[T]:
+        return get_typed(self.props, key, value_type, default_value, parse_fn)
+
+    def get_str(self, key: str, default_value: str = None):
+        return self.get_typed(key, str, default_value)
 
     def get_bool(self, key: str, default_value: bool = None):
-        return self.get(key, default_value, parse_bool)
+        return self.get_typed(key, bool, default_value, parse_bool)
 
     def get_int(self, key: str, default_value: int = None):
-        return self.get(key, default_value, int)
+        return self.get_typed(key, int, default_value)
 
     def get_float(self, key: str, default_value: float = None):
-        return self.get(key, default_value, float)
+        return self.get_typed(key, float, default_value)
+
+    def get_str_list(self, key: str, default_value: str = None):
+        return self.get_typed(key, list, default_value, parse_str_list)
+
+    def get_dict(self, key: str, default_value: dict = None) -> Optional[dict]:
+        result = self.get(key, default_value=default_value)
+        if result is None:
+            return None
+        if not isinstance(result, dict):
+            raise AssertionError(
+                f'dict value required for key={repr(key)}, but was: {repr(result)}'
+            )
+        return result
+
+    def get_list(self, key: str, default_value: list = None) -> Optional[list]:
+        result = self.get(key, default_value=default_value)
+        if result is None:
+            return None
+        if not isinstance(result, list):
+            raise AssertionError(
+                f'list value required for key={repr(key)}, but was: {repr(result)}'
+            )
+        return result
 
     def __repr__(self):
         return '%s(props=%r)' % (
@@ -88,7 +155,7 @@ class AppConfig:
     def iter_layers(self) -> Iterable[LayerConfig]:
         return self.layers
 
-    def iter_flatten_layer_props(self) -> Iterable[LayerConfig]:
+    def iter_flatten_layer_props(self) -> Iterable[dict]:
         for layer in self.layers:
             yield layer.props
             yield from _iter_find_nested_layer_props(layer.props)
