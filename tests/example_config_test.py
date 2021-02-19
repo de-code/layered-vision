@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from unittest.mock import patch
 from typing import List
@@ -8,6 +9,9 @@ from layered_vision.sources.api import get_image_source_for_path
 from layered_vision.utils.image import ImageArray
 from layered_vision import app
 from layered_vision.cli import main
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 EXAMPLE_CONFIG_DIR = './example-config'
@@ -55,7 +59,8 @@ def _get_image_output_sink_for_path_mock():
 
 def get_not_preloading_image_source_for_path_mock(path: str, **kwargs):
     kwargs['preload'] = False
-    return get_image_source_for_path(path)
+    LOGGER.debug('calling get_image_source_for_path path: %r, kwargs: %s', path, kwargs)
+    return get_image_source_for_path(path, **kwargs)
 
 
 @pytest.fixture(name='get_image_source_for_path_mock', autouse=True)
