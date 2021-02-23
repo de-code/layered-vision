@@ -4,5 +4,5 @@ opencv-python==4.5.1.48
 pafy==0.5.5
 pyfakewebcam==0.1.0
 PyYAML==5.4.1
-tf-bodypix[tf,tfjs]==0.3.4
+tf-bodypix[tf,tfjs]==0.3.5
 youtube_dl==2021.2.22
