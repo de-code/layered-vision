@@ -14,7 +14,7 @@ from layered_vision.cli import (
 
 
 EXAMPLE_IMAGE_URL = (
-    r'https://github.com/numpy/numpy/raw/master/branding/logo/logomark/numpylogoicon.png'
+    r'https://raw.githubusercontent.com/numpy/numpy/v1.20.1/branding/logo/logomark/numpylogoicon.png'
 )
 
 

@@ -76,7 +76,7 @@ A very simple configuration file that downloads the `numpy` logo and saves it to
 ```yaml
 layers:
 - id: in
-  input_path: "https://github.com/numpy/numpy/raw/master/branding/logo/logomark/numpylogoicon.png"
+  input_path: "https://raw.githubusercontent.com/numpy/numpy/v1.20.1/branding/logo/logomark/numpylogoicon.png"
 - id: out
   output_path: "numpy-logo.png"
 ```
@@ -86,7 +86,7 @@ You could also have two outputs (`example-config/two-outputs.yml`):
 ```yaml
 layers:
   - id: in
-    input_path: "https://github.com/numpy/numpy/raw/master/branding/logo/logomark/numpylogoicon.png"
+    input_path: "https://raw.githubusercontent.com/numpy/numpy/v1.20.1/branding/logo/logomark/numpylogoicon.png"
   - id: out1
     output_path: "data/numpy-logo1.png"
   - id: out2
@@ -100,7 +100,7 @@ By using `window` as the `output_path`, the image is displayed in a window (`exa
 ```yaml
 layers:
   - id: in
-    input_path: "https://github.com/numpy/numpy/raw/master/branding/logo/logomark/numpylogoicon.png"
+    input_path: "https://raw.githubusercontent.com/numpy/numpy/v1.20.1/branding/logo/logomark/numpylogoicon.png"
     width: 480
     height: 300
     repeat: true
