@@ -130,6 +130,9 @@ class RuntimeLayer:
 
     def set_layer_config(self, layer_config: ResolvedLayerConfig):
         if self.layer_config.props == layer_config.props:
+            # replace layer config anyway, as it may include other resolved config information,
+            # such as the source layers
+            self.layer_config = layer_config
             return
         LOGGER.info(
             'updating layer config: id=%r',
@@ -292,6 +295,7 @@ class LayeredVisionApp:
         self.load()
 
     def set_resolved_app_config(self, resolved_app_config: ResolvedAppConfig):
+        had_layers = bool(self.layer_by_id)
         layers = resolved_app_config.layers
         assert len(layers) >= 2
         runtime_layers: List[RuntimeLayer] = []
@@ -299,6 +303,8 @@ class LayeredVisionApp:
             layer_id = layer_config.layer_id
             runtime_layer = self.layer_by_id.get(layer_id)
             if not runtime_layer:
+                if had_layers:
+                    LOGGER.info('adding layer: id=%r', layer_id)
                 runtime_layer = self.exit_stack.enter_context(RuntimeLayer(
                     layer_index,
                     layer_config,
