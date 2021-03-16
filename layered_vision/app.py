@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import ExitStack
 from functools import partial
 from threading import Event
@@ -114,12 +115,31 @@ class RuntimeLayer:
 
     def __exit__(self, *args, **kwargs):
         self.exit_stack.__exit__(*args, **kwargs)
+        self.image_iterator = None
+        self.output_sink = None
+        self.filter = None
+
+    def close(self):
+        self.__exit__(None, None, None)
 
     def __repr__(self):
         return '%s(layer_config=%r, ...)' % (
             type(self).__name__,
             self.layer_config
         )
+
+    def set_layer_config(self, layer_config: ResolvedLayerConfig):
+        if self.layer_config.props == layer_config.props:
+            return
+        LOGGER.info(
+            'updating layer config: id=%r',
+            layer_config.layer_id
+        )
+        self.layer_config = layer_config
+        if self.filter:
+            self.filter.set_config(layer_config)
+        if self.image_iterator or self.output_sink:
+            self.close()
 
     def get_image_iterator(self) -> T_ImageSource:
         if not self.is_input_layer:
@@ -234,18 +254,14 @@ class RuntimeLayer:
     def resize_like_id(self) -> Optional[str]:
         return self.layer_config.get_str('resize_like_id')
 
-    def add_source_layer(self, source_layer: 'RuntimeLayer'):
-        self.source_layers.append(source_layer)
-
 
 class LayeredVisionApp:
     def __init__(self, config_path: str, override_map: Dict[str, Dict[str, T_Value]] = None):
         self.config_path = config_path
+        self.config_modified_time = 0
         self.override_map = override_map
         self.exit_stack = ExitStack()
         self.timer = LoggingTimer()
-        self.output_sink = None
-        self.image_iterator = None
         self.output_runtime_layers: Optional[List[RuntimeLayer]] = None
         self.application_stopped_event = Event()
         self.layer_by_id: Dict[str, RuntimeLayer] = {}
@@ -267,6 +283,11 @@ class LayeredVisionApp:
         self.application_stopped_event.set()
         self.exit_stack.__exit__(*args, **kwargs)
 
+    def get_config_modified_timestamp(self):
+        if os.path.isfile(self.config_path):
+            return os.path.getmtime(self.config_path)
+        return 0
+
     def reload_config(self):
         self.load()
 
@@ -286,12 +307,20 @@ class LayeredVisionApp:
                 ))
                 assert runtime_layer
                 self.layer_by_id[layer_id] = runtime_layer
+            else:
+                runtime_layer.set_layer_config(layer_config)
             runtime_layers.append(runtime_layer)
         for runtime_layer in runtime_layers:
             runtime_layer.source_layers = [
                 self.layer_by_id[source_layer_config.layer_id]
                 for source_layer_config in runtime_layer.layer_config.input_layers
             ]
+        seen_layer_ids = {runtime_layer.layer_id for runtime_layer in runtime_layers}
+        removed_layer_ids = set(self.layer_by_id.keys()) - seen_layer_ids
+        for layer_id in removed_layer_ids:
+            LOGGER.info('removing layer: id=%r', layer_id)
+            self.layer_by_id[layer_id].close()
+            del self.layer_by_id[layer_id]
         self.output_runtime_layers = [
             runtime_layer
             for runtime_layer in runtime_layers
@@ -311,11 +340,13 @@ class LayeredVisionApp:
     def set_app_config(self, app_config: AppConfig):
         LOGGER.info('config: %s', app_config)
         resolved_config = ResolvedAppConfig(app_config)
+        LOGGER.info('resolved_config: %s', resolved_config)
         self.set_resolved_app_config(resolved_config)
 
     def load(self):
         app_config = load_config(self.config_path)
         apply_config_override_map(app_config, self.override_map)
+        self.config_modified_time = self.get_config_modified_timestamp()
         self.set_app_config(app_config)
 
     def get_frame_for_layer(self, runtime_layer: RuntimeLayer):
@@ -326,6 +357,8 @@ class LayeredVisionApp:
     def next_frame(self):
         self.timer.on_frame_start(initial_step_name='other')
         self.context.frame_cache.clear()
+        if self.get_config_modified_timestamp() > self.config_modified_time:
+            self.reload_config()
         try:
             for output_runtime_layer in self.output_runtime_layers:
                 self.timer.on_step_start('other')

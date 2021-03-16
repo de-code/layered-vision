@@ -35,6 +35,11 @@ class TestResolvedAppConfig:
                         'id': 'branch_1_layer_1',
                         'filter': 'dummy'
                     }]
+                }, {
+                    'layers': [{
+                        'id': 'branch_2_layer_1',
+                        'filter': 'dummy'
+                    }]
                 }]
             }),
             LayerConfig({
@@ -49,6 +54,10 @@ class TestResolvedAppConfig:
             'output_path_1'
         )
         assert resolved_app_config.layer_by_id['branch_1_layer_1'].input_layer_ids == ['in']
+        assert resolved_app_config.layer_by_id['branch_2_layer_1'].input_layer_ids == ['in']
+        assert resolved_app_config.layer_by_id['branches'].input_layer_ids == [
+            'branch_1_layer_1', 'branch_2_layer_1'
+        ]
         assert resolved_app_config.layer_by_id['out'].input_layer_ids == ['branches']
 
     def test_should_skip_disabled_layers(self):
@@ -62,6 +71,33 @@ class TestResolvedAppConfig:
                 'id': 'in2',
                 'enabled': False,
                 'input_path': 'input_path_1'
+            }),
+            LayerConfig({
+                'id': 'out',
+                'output_path': 'output_path_1'
+            })
+        ]))
+        assert resolved_app_config.layer_by_id['in1']
+        assert not resolved_app_config.layer_by_id.get('in2')
+        assert resolved_app_config.layer_by_id['out'].input_layer_ids == ['in1']
+
+    def test_should_skip_disabled_branch_layers(self):
+        resolved_app_config = ResolvedAppConfig(AppConfig([
+            LayerConfig({
+                'id': 'branches',
+                'branches': [{
+                    'layers': [{
+                        'id': 'in1',
+                        'enabled': True,
+                        'input_path': 'input_path_1'
+                    }]
+                }, {
+                    'layers': [{
+                        'id': 'in2',
+                        'enabled': False,
+                        'input_path': 'input_path_1'
+                    }]
+                }]
             }),
             LayerConfig({
                 'id': 'out',

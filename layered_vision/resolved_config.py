@@ -35,6 +35,13 @@ class ResolvedLayerConfig(LayerConfig):
     def is_filter_layer(self) -> bool:
         return bool(self.get('filter'))
 
+    def __repr__(self):
+        return '%s(props=%r, input_layer_ids=%s)' % (
+            type(self).__name__,
+            self.props,
+            self.input_layer_ids
+        )
+
 
 class ResolvedAppConfig:
     def __init__(self, app_config: AppConfig):
@@ -103,6 +110,8 @@ class ResolvedAppConfig:
             default_id_prefix=default_id,
             default_input_layer=default_input_layer
         )
+        if not resolved_layers:
+            return None
         return resolved_layers[-1]
 
     def _add_branches_recursively(
@@ -113,18 +122,28 @@ class ResolvedAppConfig:
     ):
         branches: Optional[List[dict]] = layer_config.get_list('branches')
         assert branches
-        branch_layers = [
-            self._add_branch_recursively(
+        branch_layers = []
+        for branch_index, branch_config in enumerate(branches):
+            branch_layer = self._add_branch_recursively(
                 LayerConfig(branch_config),
                 default_id=f'{layer_id}b{branch_index}',
                 default_input_layer=default_input_layer
             )
-            for branch_index, branch_config in enumerate(branches)
-        ]
+            if branch_layer:
+                branch_layers.append(branch_layer)
+        assert branch_layers
+        if len(branch_layers) == 1:
+            return branch_layers[0]
         resolved_layer_config = ResolvedLayerConfig({
-            **layer_config.props,
+            **{key: value for key, value in layer_config.props.items() if key != 'branches'},
             'id': layer_id,
             'filter': 'composite'
         })
         resolved_layer_config.input_layers = branch_layers
         return self._add_resolved_layer(resolved_layer_config)
+
+    def __repr__(self):
+        return '%s(layers=%r)' % (
+            type(self).__name__,
+            self.layers
+        )

@@ -74,7 +74,7 @@ class TestMain:
             else:
                 assert app.output_runtime_layers[0].source_layers[0].source_layers
 
-    def _test_should_reload_input_source_if_changed(self, temp_dir: Path):
+    def test_should_reload_input_source_if_changed(self, temp_dir: Path):
         input_path = temp_dir / 'input.png'
         input_path_2 = temp_dir / 'input_2.png'
         output_path = temp_dir / 'output.png'

@@ -120,6 +120,14 @@ class PropsConfig:
             self.props
         )
 
+    def __eq__(self, other):
+        if isinstance(other, PropsConfig):
+            return self.props == other.props
+        return super().__eq__(other)
+
+    def __hash__(self):
+        return hash(self.props)
+
 
 class LayerConfig(PropsConfig):
     @staticmethod
@@ -161,7 +169,7 @@ class AppConfig:
             yield from _iter_find_nested_layer_props(layer.props)
 
     def __repr__(self):
-        return '%s(layer=%r)' % (
+        return '%s(layers=%r)' % (
             type(self).__name__,
             self.layers
         )
