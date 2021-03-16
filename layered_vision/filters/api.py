@@ -1,11 +1,13 @@
 import logging
 from abc import ABC, abstractmethod
 from importlib import import_module
+from typing import NamedTuple
 
 import numpy as np
 
 import cv2
 
+from ..utils.timer import LoggingTimer
 from ..utils.image import (
     ImageArray,
     ImageSize,
@@ -16,10 +18,15 @@ from ..utils.image import (
     erode_image,
     dilate_image
 )
+from ..utils.lazy_image import resolve_lazy_image
 from ..config import LayerConfig
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+class FilterContext(NamedTuple):
+    timer: LoggingTimer
 
 
 class LayerFilter(ABC):
@@ -29,8 +36,25 @@ class LayerFilter(ABC):
 
 
 class AbstractLayerFilter(LayerFilter):
-    def __init__(self, layer_config: LayerConfig, **__):
+    def __init__(
+        self,
+        layer_config: LayerConfig,
+        filter_context: FilterContext,
+        **__
+    ):
         self.layer_config = layer_config
+        self.context = filter_context
+
+    @property
+    def filter_id(self):
+        return self.layer_config.get('id')
+
+    @abstractmethod
+    def do_filter(self, image_array: ImageArray) -> ImageArray:
+        pass
+
+    def filter(self, image_array: ImageArray) -> ImageArray:
+        return self.do_filter(resolve_lazy_image(image_array))
 
 
 class ChromaKeyFilter(AbstractLayerFilter):
@@ -58,8 +82,8 @@ class ChromaKeyFilter(AbstractLayerFilter):
             mask
         )
 
-    def filter(self, image_array: ImageArray) -> ImageArray:
-        return self.do_filter(image_array)
+    # def filter(self, image_array: ImageArray) -> ImageArray:
+    #     return self.do_filter(image_array)
 
 
 CHANNEL_NAMES = ['red', 'green', 'blue', 'alpha']
@@ -80,7 +104,7 @@ class AbstractOptionalChannelFilter(AbstractLayerFilter):
     def do_channel_filter(self, image_array: ImageArray) -> ImageArray:
         pass
 
-    def filter(self, image_array: ImageArray) -> ImageArray:
+    def do_filter(self, image_array: ImageArray) -> ImageArray:
         if self.channel_index is None:
             return self.do_channel_filter(image_array)
         channel_count = image_array.shape[2]
@@ -182,7 +206,8 @@ FILTER_CLASS_BY_NAME_MAP = {
 
 
 def create_filter(
-    layer_config: LayerConfig
+    layer_config: LayerConfig,
+    filter_context: FilterContext
 ) -> LayerFilter:
     filter_name = layer_config.get_str('filter')
     filter_class = FILTER_CLASS_BY_NAME_MAP.get(filter_name)
@@ -192,5 +217,5 @@ def create_filter(
         filter_class = _filter_class
         FILTER_CLASS_BY_NAME_MAP[filter_name] = _filter_class
     if filter_class:
-        return filter_class(layer_config)
+        return filter_class(layer_config, filter_context=filter_context)
     raise RuntimeError('unrecognised filter: %r' % filter_name)

@@ -1,5 +1,6 @@
 import logging
 from contextlib import ExitStack
+from functools import partial
 from threading import Event
 from typing import ContextManager, Dict, Iterable, Optional, List
 
@@ -12,15 +13,17 @@ from .utils.image import (
     apply_alpha,
     combine_images
 )
+from .utils.lazy_image import LazyImageList
 
 from .sinks.api import (
     T_OutputSink,
     get_image_output_sink_for_path
 )
 
-from .config import load_config, apply_config_override_map, LayerConfig, T_Value
+from .config import load_config, apply_config_override_map, AppConfig, LayerConfig, T_Value
+from .resolved_config import ResolvedAppConfig, ResolvedLayerConfig
 from .sources.api import get_image_source_for_path, T_ImageSource
-from .filters.api import LayerFilter, create_filter
+from .filters.api import FilterContext, LayerFilter, create_filter
 
 
 LOGGER = logging.getLogger(__name__)
@@ -87,95 +90,11 @@ def get_image_source_for_layer_config(
     )
 
 
-class RuntimeBranch:
-    def __init__(self, runtime_layers: List['RuntimeLayer']):
-        self.runtime_layers = runtime_layers
-
-    @staticmethod
-    def from_config(
-        branch_config: dict,
-        branch_id: str,
-        context: RuntimeContext
-    ) -> 'RuntimeBranch':
-        LOGGER.debug('branch_config: %s', branch_config)
-        layers_config = branch_config['layers']
-        return RuntimeBranch(runtime_layers=[
-            RuntimeLayer(
-                layer_index,
-                LayerConfig(layer_config_props),
-                layer_id=layer_config_props.get('id') or '%sl%d' % (branch_id, layer_index),
-                context=context
-            )
-            for layer_index, layer_config_props in enumerate(layers_config)
-        ])
-
-    def __next__(self):
-        return next(self.runtime_layers[-1])
-
-    @property
-    def is_no_source(self):
-        return not self.runtime_layers or self.runtime_layers[0].is_no_source
-
-    @property
-    def is_enabled(self):
-        return any(
-            layer.is_enabled
-            for layer in self.runtime_layers
-        )
-
-    def add_source_layer(self, source_layer: 'RuntimeLayer'):
-        if not self.runtime_layers:
-            return
-        self.runtime_layers[0].add_source_layer(source_layer)
-
-
-class RuntimeBranches:
-    def __init__(
-        self,
-        branches: List[RuntimeBranch],
-        layer_id: str,
-        context: RuntimeContext
-    ):
-        self.branches = branches
-        self.layer_id = layer_id
-        self.context = context
-
-    @staticmethod
-    def from_config(
-        branches_config: List[dict],
-        layer_id: str,
-        context: RuntimeContext
-    ) -> 'RuntimeBranches':
-        LOGGER.debug('branches_config: %s', branches_config)
-        return RuntimeBranches([
-            RuntimeBranch.from_config(
-                branch_config,
-                branch_id='%sb%d' % (layer_id, branch_index),
-                context=context
-            )
-            for branch_index, branch_config in enumerate(branches_config)
-        ], layer_id=layer_id, context=context)
-
-    def __next__(self):
-        branch_images = list(reversed([
-            next(branch)
-            for branch in reversed(self.branches)
-            if branch.is_enabled
-        ]))
-        self.context.timer.on_step_start('%s.combine' % self.layer_id)
-        return combine_images(branch_images)
-
-    def add_source_layer(self, source_layer: 'RuntimeLayer'):
-        for branch in self.branches:
-            if not branch.is_no_source:
-                branch.add_source_layer(source_layer)
-
-
 class RuntimeLayer:
     def __init__(
         self,
         layer_index: int,
-        layer_config: LayerConfig,
+        layer_config: ResolvedLayerConfig,
         layer_id: str,
         context: RuntimeContext,
         source_layers: List['RuntimeLayer'] = None
@@ -189,14 +108,6 @@ class RuntimeLayer:
         self.output_sink: Optional[T_OutputSink] = None
         self.filter: Optional[LayerFilter] = None
         self.context = context
-        self.branches = None
-        branches_config: Optional[List[dict]] = layer_config.get_list('branches')
-        if branches_config:
-            self.branches = RuntimeBranches.from_config(
-                branches_config,
-                layer_id=layer_id,
-                context=context
-            )
 
     def __enter__(self):
         return self
@@ -250,7 +161,8 @@ class RuntimeLayer:
         if not self.is_filter_layer:
             raise RuntimeError('not an output layer')
         _filter = create_filter(
-            self.layer_config
+            self.layer_config,
+            filter_context=FilterContext(timer=self.context.timer)
         )
         self.filter = _filter
         return _filter
@@ -258,30 +170,34 @@ class RuntimeLayer:
     def __iter__(self):
         return self
 
+    @property
+    def source_lazy_image_list(self):
+        return LazyImageList([
+            partial(next, source_layer)
+            for source_layer in self.source_layers
+        ])
+
     def __next__(self):
         try:
             if not self.is_enabled:
                 return next(self.source_layers[0])
             if self.is_filter_layer:
-                source_data = next(self.source_layers[0])
-                self.context.timer.on_step_start(self.layer_id)
-                return self.get_filter().filter(source_data)
-            if self.branches:
-                return next(self.branches)
-            self.context.timer.on_step_start(self.layer_id)
-            image_array = self.context.frame_cache.get(self.layer_id)
-            if image_array is None:
-                image_array = next(self.get_image_iterator())
-                if has_transparent_alpha(image_array) and self.source_layers:
-                    source_image = next(self.source_layers[0])
-                    self.context.timer.on_step_start(self.layer_id + '.combine')
-                    image_array = combine_images([source_image] + [image_array])
-                self.context.frame_cache[self.layer_id] = image_array
-            if self.context.preferred_image_size is None:
-                image_size = get_image_size(image_array)
-                LOGGER.info('setting preferred image size to: %s', image_size)
-                self.context.preferred_image_size = image_size
-            return image_array
+                with self.context.timer.enter_step(self.layer_id):
+                    return self.get_filter().filter(self.source_lazy_image_list)
+            with self.context.timer.enter_step(self.layer_id):
+                image_array = self.context.frame_cache.get(self.layer_id)
+                if image_array is None:
+                    image_array = next(self.get_image_iterator())
+                    if has_transparent_alpha(image_array) and self.source_layers:
+                        source_image = next(self.source_layers[0])
+                        self.context.timer.on_step_start(self.layer_id + '.combine')
+                        image_array = combine_images([source_image] + [image_array])
+                    self.context.frame_cache[self.layer_id] = image_array
+                if self.context.preferred_image_size is None:
+                    image_size = get_image_size(image_array)
+                    LOGGER.info('setting preferred image size to: %s', image_size)
+                    self.context.preferred_image_size = image_size
+                return image_array
         except (StopIteration, LayerException):
             raise
         except Exception as exc:
@@ -320,63 +236,6 @@ class RuntimeLayer:
 
     def add_source_layer(self, source_layer: 'RuntimeLayer'):
         self.source_layers.append(source_layer)
-        if self.branches:
-            self.branches.add_source_layer(source_layer)
-
-
-def get_source_layer_index(
-    all_runtime_layers: List[RuntimeLayer],
-    target_layer: RuntimeLayer
-):
-    source_index = target_layer.layer_index - 1
-    while all_runtime_layers[source_index].is_output_layer:
-        source_index -= 1
-    assert source_index >= 0
-    return source_index
-
-
-def add_source_layers_recursively(
-    all_runtime_layers: List[RuntimeLayer],
-    target_layer: RuntimeLayer
-):
-    if target_layer.source_layers:
-        return
-    source_layer_index = get_source_layer_index(
-        all_runtime_layers,
-        target_layer
-    )
-    source_layer = all_runtime_layers[source_layer_index]
-    target_layer.add_source_layer(source_layer)
-    if not source_layer.is_no_source and source_layer_index > 0:
-        add_source_layers_recursively(
-            all_runtime_layers,
-            source_layer
-        )
-    if target_layer.branches:
-        for branch in target_layer.branches.branches:
-            if not branch.runtime_layers:
-                branch.runtime_layers = [source_layer]
-                continue
-            if branch.runtime_layers[0].is_no_source:
-                continue
-            add_source_layers_recursively(
-                branch.runtime_layers,
-                branch.runtime_layers[-1]
-            )
-
-
-def add_layer_by_id_recursively(
-    layer_by_id: Dict[str, RuntimeLayer],
-    all_runtime_layers: List[RuntimeLayer]
-):
-    for layer in all_runtime_layers:
-        layer_by_id[layer.layer_id] = layer
-        if layer.branches:
-            for branch in layer.branches.branches:
-                add_layer_by_id_recursively(
-                    layer_by_id,
-                    branch.runtime_layers
-                )
 
 
 class LayeredVisionApp:
@@ -385,10 +244,9 @@ class LayeredVisionApp:
         self.override_map = override_map
         self.exit_stack = ExitStack()
         self.timer = LoggingTimer()
-        self.config = None
         self.output_sink = None
         self.image_iterator = None
-        self.output_runtime_layers = None
+        self.output_runtime_layers: Optional[List[RuntimeLayer]] = None
         self.application_stopped_event = Event()
         self.layer_by_id: Dict[str, RuntimeLayer] = {}
         self.context = RuntimeContext(
@@ -409,28 +267,36 @@ class LayeredVisionApp:
         self.application_stopped_event.set()
         self.exit_stack.__exit__(*args, **kwargs)
 
-    def load(self):
-        self.config = load_config(self.config_path)
-        apply_config_override_map(self.config, self.override_map)
-        LOGGER.info('config: %s', self.config)
-        layers = self.config.layers
+    def reload_config(self):
+        self.load()
+
+    def set_resolved_app_config(self, resolved_app_config: ResolvedAppConfig):
+        layers = resolved_app_config.layers
         assert len(layers) >= 2
-        runtime_layers = [
-            self.exit_stack.enter_context(RuntimeLayer(
-                layer_index, layer_config,
-                layer_id=layer_config.get_str('id') or 'l%d' % layer_index,
-                context=self.context
-            ))
-            for layer_index, layer_config in enumerate(layers)
-        ]
-        add_layer_by_id_recursively(self.layer_by_id, runtime_layers)
+        runtime_layers: List[RuntimeLayer] = []
+        for layer_index, layer_config in enumerate(layers):
+            layer_id = layer_config.layer_id
+            runtime_layer = self.layer_by_id.get(layer_id)
+            if not runtime_layer:
+                runtime_layer = self.exit_stack.enter_context(RuntimeLayer(
+                    layer_index,
+                    layer_config,
+                    layer_id=layer_id,
+                    context=self.context
+                ))
+                assert runtime_layer
+                self.layer_by_id[layer_id] = runtime_layer
+            runtime_layers.append(runtime_layer)
+        for runtime_layer in runtime_layers:
+            runtime_layer.source_layers = [
+                self.layer_by_id[source_layer_config.layer_id]
+                for source_layer_config in runtime_layer.layer_config.input_layers
+            ]
         self.output_runtime_layers = [
             runtime_layer
             for runtime_layer in runtime_layers
             if runtime_layer.is_output_layer and runtime_layer.is_enabled
         ]
-        for output_layer in self.output_runtime_layers:
-            add_source_layers_recursively(runtime_layers, output_layer)
         LOGGER.debug('output layers: %s', [
             '%s -> %s' % (
                 output_runtime_layer.layer_id,
@@ -441,6 +307,16 @@ class LayeredVisionApp:
             )
             for output_runtime_layer in self.output_runtime_layers
         ])
+
+    def set_app_config(self, app_config: AppConfig):
+        LOGGER.info('config: %s', app_config)
+        resolved_config = ResolvedAppConfig(app_config)
+        self.set_resolved_app_config(resolved_config)
+
+    def load(self):
+        app_config = load_config(self.config_path)
+        apply_config_override_map(app_config, self.override_map)
+        self.set_app_config(app_config)
 
     def get_frame_for_layer(self, runtime_layer: RuntimeLayer):
         source_layers = runtime_layer.source_layers

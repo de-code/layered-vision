@@ -64,7 +64,7 @@ class BodyPixFilter(AbstractLayerFilter):
         self._bodypix_result_cache_time = current_time
         return self._bodypix_result_cache
 
-    def filter(self, image_array: ImageArray) -> ImageArray:
+    def do_filter(self, image_array: ImageArray) -> ImageArray:
         result = self.get_bodypix_result(image_array)
         mask = result.get_mask(threshold=self.threshold, dtype=np.uint8)
         if self.parts:
