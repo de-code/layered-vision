@@ -26,6 +26,10 @@ layers:
         internal_resolution: 0.5
         threshold: 0.5
         cache_model_result_secs: 0
+      - id: invert
+        filter: invert
+        channel: alpha
+        enabled: false
       - id: erode
         filter: erode
         channel: alpha
