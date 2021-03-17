@@ -55,6 +55,10 @@ layers:
         channel: alpha
         frame_count: 3
         decay: 0
+      - id: pixelate
+        filter: pixelate
+        value: 0.1
+        enabled: false
   - id: fg
     enabled: false
     no_source: false
