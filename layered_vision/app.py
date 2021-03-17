@@ -71,6 +71,32 @@ class RuntimeContext:
         self.application_stopped_event = application_stopped_event
 
 
+class OutputSinkWrapper:
+    def __init__(
+        self,
+        output_sink_generator: ContextManager[T_OutputSink]
+    ):
+        self.output_sink_generator = output_sink_generator
+        self._output_sink: Optional[T_OutputSink] = None
+
+    def close(self):
+        self.__exit__(None, None, None)
+
+    @property
+    def output_sink(self):
+        if self._output_sink is None:
+            self.__enter__()
+        assert self._output_sink is not None
+        return self._output_sink
+
+    def __enter__(self):
+        self._output_sink = self.output_sink_generator.__enter__()
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        self.output_sink_generator.__exit__(*args, **kwargs)
+
+
 class ImageSourceWrapper:
     def __init__(
         self,
@@ -138,7 +164,7 @@ class RuntimeLayer:
         self.exit_stack = ExitStack()
         self.source_layers = (source_layers or []).copy()
         self.image_source: Optional[ImageSourceWrapper] = None
-        self.output_sink: Optional[T_OutputSink] = None
+        self.output_sink_wrapper: Optional[OutputSinkWrapper] = None
         self.filter: Optional[LayerFilter] = None
         self.context = context
 
@@ -150,7 +176,9 @@ class RuntimeLayer:
         if self.image_source is not None:
             self.image_source.close()
         self.image_source = None
-        self.output_sink = None
+        if self.output_sink_wrapper is not None:
+            self.output_sink_wrapper.close()
+        self.output_sink_wrapper = None
         self.filter = None
 
     def close(self):
@@ -175,7 +203,7 @@ class RuntimeLayer:
         self.layer_config = layer_config
         if self.filter:
             self.filter.set_config(layer_config)
-        if self.image_source or self.output_sink:
+        if self.image_source or self.output_sink_wrapper:
             self.close()
 
     def get_image_iterator(self) -> T_ImageSource:
@@ -200,14 +228,14 @@ class RuntimeLayer:
             raise RuntimeError('not an output layer: %r' % self)
         output_path = self.layer_config.get_str('output_path')
         assert output_path, "output_path required"
-        if self.output_sink is None:
-            self.output_sink = self.exit_stack.enter_context(
+        if self.output_sink_wrapper is None:
+            self.output_sink_wrapper = OutputSinkWrapper(
                 get_image_output_sink_for_path(
                     output_path,
                     **get_custom_layer_props(self.layer_config)
                 )
             )
-        return self.output_sink
+        return self.output_sink_wrapper.output_sink
 
     def get_filter(self) -> LayerFilter:
         if self.filter is not None:
