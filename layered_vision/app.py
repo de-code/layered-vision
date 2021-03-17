@@ -1,5 +1,6 @@
 import logging
 import os
+from time import monotonic
 from contextlib import ExitStack
 from functools import partial
 from threading import Event
@@ -318,7 +319,12 @@ class RuntimeLayer:
 
 
 class LayeredVisionApp:
-    def __init__(self, config_path: str, override_map: Dict[str, Dict[str, T_Value]] = None):
+    def __init__(
+        self,
+        config_path: str,
+        override_map: Dict[str, Dict[str, T_Value]] = None,
+        min_config_reload_secs: float = 1.0
+    ):
         self.config_path = config_path
         self.config_modified_time = 0
         self.override_map = override_map
@@ -332,6 +338,8 @@ class LayeredVisionApp:
             timer=self.timer,
             application_stopped_event=self.application_stopped_event
         )
+        self.min_config_reload_secs = min_config_reload_secs
+        self.config_last_checked_time = monotonic()
 
     def __enter__(self):
         try:
@@ -349,6 +357,13 @@ class LayeredVisionApp:
         if os.path.isfile(self.config_path):
             return os.path.getmtime(self.config_path)
         return 0
+
+    def check_reload_config(self):
+        if monotonic() < self.config_last_checked_time + self.min_config_reload_secs:
+            return
+        if self.get_config_modified_timestamp() > self.config_modified_time:
+            self.reload_config()
+        self.config_last_checked_time = monotonic()
 
     def reload_config(self):
         self.load()
@@ -422,8 +437,7 @@ class LayeredVisionApp:
     def next_frame(self):
         self.timer.on_frame_start(initial_step_name='other')
         self.context.frame_cache.clear()
-        if self.get_config_modified_timestamp() > self.config_modified_time:
-            self.reload_config()
+        self.check_reload_config()
         try:
             for output_runtime_layer in self.output_runtime_layers:
                 self.timer.on_step_start('other')
