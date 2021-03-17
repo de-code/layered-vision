@@ -3,7 +3,7 @@ import os
 from contextlib import ExitStack
 from functools import partial
 from threading import Event
-from typing import ContextManager, Dict, Iterable, Optional, List
+from typing import ContextManager, Dict, Optional, List
 
 from .utils.timer import LoggingTimer
 from .utils.image import (
@@ -71,11 +71,39 @@ class RuntimeContext:
         self.application_stopped_event = application_stopped_event
 
 
+class ImageSourceWrapper:
+    def __init__(
+        self,
+        image_source_generator: ContextManager[T_ImageSource],
+        stopped_event: Event
+    ):
+        self.image_source_generator = image_source_generator
+        self._image_iterator: Optional[T_ImageSource] = None
+        self.stopped_event = stopped_event
+
+    def close(self):
+        self.__exit__(None, None, None)
+
+    @property
+    def image_iterator(self):
+        if self._image_iterator is None:
+            self.__enter__()
+        assert self._image_iterator is not None
+        return self._image_iterator
+
+    def __enter__(self):
+        self._image_iterator = iter(self.image_source_generator.__enter__())
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        self.stopped_event.set()
+        self.image_source_generator.__exit__(*args, **kwargs)
+
+
 def get_image_source_for_layer_config(
     layer_config: LayerConfig,
-    preferred_image_size: Optional[ImageSize],
-    stopped_event: Optional[Event]
-) -> ContextManager[Iterable[ImageArray]]:
+    preferred_image_size: Optional[ImageSize]
+) -> ImageSourceWrapper:
     width = layer_config.get_int('width')
     height = layer_config.get_int('height')
     image_size: Optional[ImageSize]
@@ -83,11 +111,15 @@ def get_image_source_for_layer_config(
         image_size = ImageSize(width=width, height=height)
     else:
         image_size = preferred_image_size
-    return get_image_source_for_path(
-        layer_config.get_str('input_path'),
-        image_size=image_size,
-        stopped_event=stopped_event,
-        **get_custom_layer_props(layer_config)
+    stopped_event = Event()
+    return ImageSourceWrapper(
+        get_image_source_for_path(
+            layer_config.get_str('input_path'),
+            image_size=image_size,
+            stopped_event=stopped_event,
+            **get_custom_layer_props(layer_config)
+        ),
+        stopped_event=stopped_event
     )
 
 
@@ -105,7 +137,7 @@ class RuntimeLayer:
         self.layer_id = layer_id
         self.exit_stack = ExitStack()
         self.source_layers = (source_layers or []).copy()
-        self.image_iterator: Optional[T_ImageSource] = None
+        self.image_source: Optional[ImageSourceWrapper] = None
         self.output_sink: Optional[T_OutputSink] = None
         self.filter: Optional[LayerFilter] = None
         self.context = context
@@ -115,7 +147,9 @@ class RuntimeLayer:
 
     def __exit__(self, *args, **kwargs):
         self.exit_stack.__exit__(*args, **kwargs)
-        self.image_iterator = None
+        if self.image_source is not None:
+            self.image_source.close()
+        self.image_source = None
         self.output_sink = None
         self.filter = None
 
@@ -141,28 +175,25 @@ class RuntimeLayer:
         self.layer_config = layer_config
         if self.filter:
             self.filter.set_config(layer_config)
-        if self.image_iterator or self.output_sink:
+        if self.image_source or self.output_sink:
             self.close()
 
     def get_image_iterator(self) -> T_ImageSource:
         if not self.is_input_layer:
             raise RuntimeError('not an input layer: %r' % self)
-        if self.image_iterator is not None:
-            return self.image_iterator
+        if self.image_source is not None:
+            return self.image_source.image_iterator
         preferred_image_size = self.context.preferred_image_size
         resize_like_id = self.resize_like_id
         if resize_like_id:
             image = next(self.context.layer_by_id[resize_like_id])
             preferred_image_size = get_image_size(image)
-        _image_iterator = iter(self.exit_stack.enter_context(
-            get_image_source_for_layer_config(
-                self.layer_config,
-                preferred_image_size=preferred_image_size,
-                stopped_event=self.context.application_stopped_event
-            )
-        ))
-        self.image_iterator = _image_iterator
-        return _image_iterator
+        image_source = get_image_source_for_layer_config(
+            self.layer_config,
+            preferred_image_size=preferred_image_size
+        )
+        self.image_source = image_source
+        return image_source.image_iterator
 
     def get_output_sink(self) -> T_OutputSink:
         if not self.is_output_layer:
