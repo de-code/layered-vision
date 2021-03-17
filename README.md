@@ -159,6 +159,7 @@ The following filters are currently supported:
 | `bilateral` | Applies a [bilateral filter](https://en.wikipedia.org/wiki/Bilateral_filter), using `d`, `sigma_color` and `sigma_space` parameters. |
 | `motion_blur` | Adds a motion blur to the image or channel. That could be used to make an alpha mask move more slowly |
 | `pixelate` | Pixelates the input. |
+| `invert` | Inverts the input. e.g. `black` to `white` |
 
 Every *filter* may have additional properties. Please refer to the [examples](https://github.com/de-code/layered-vision/tree/develop/example-config) (or come back in the future) for more detailed information.
 
