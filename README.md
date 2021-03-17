@@ -119,7 +119,7 @@ The following inputs are currently supported:
 | image | Static image (e.g. `.png`) |
 | video | Video (e.g. `.mp4`) |
 | webcam | Linux Webcam (`/dev/videoN`) |
-| youtube | YouTube stream (e.g. `https://youtu.be/yswkqEBio2k`,  see [example config](https://github.com/de-code/layered-vision/tree/develop/example-config/display-video-bodypix-replace-background-youtube.yml)) |
+| youtube | YouTube stream (e.g. `https://youtu.be/f0cGgOv3l4c`,  see [example config](https://github.com/de-code/layered-vision/tree/develop/example-config/display-video-bodypix-replace-background-youtube.yml)) |
 | mss | Screen capture using [mss](https://python-mss.readthedocs.io/index.html) (see [example config](https://github.com/de-code/layered-vision/tree/develop/example-config/display-video-bodypix-replace-background-mss.yml)) |
 
 The `input_path` may point to a remote location (as is the case with [all examples](https://github.com/de-code/layered-vision/tree/develop/example-config)). In that case it will be downloaded and cached locally.
@@ -210,7 +210,7 @@ You could also try replacing the background with a YouTube stream:
 python -m layered_vision start \
   --config-file \
   "https://raw.githubusercontent.com/de-code/layered-vision/develop/example-config/webcam-bodypix-replace-background-to-v4l2loopback.yml" \
-  --set bg.input_path="https://youtu.be/yswkqEBio2k" \
+  --set bg.input_path="https://youtu.be/f0cGgOv3l4c" \
   --set bg.fps=30 \
   --set in.input_path="/dev/video0" \
   --set out.output_path="/dev/video2"
