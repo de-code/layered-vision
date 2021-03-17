@@ -142,24 +142,6 @@ def iter_read_raw_video_images(
         yield image_array
 
 
-def iter_read_raw_video_images_threaded(
-    video_capture: cv2.VideoCapture,
-    repeat: bool = False,
-    is_stopped: Callable[[], bool] = None
-) -> Iterable[ImageArray]:
-    iterable = iter_read_raw_video_images(
-        video_capture=video_capture,
-        repeat=repeat,
-        is_stopped=is_stopped
-    )
-    fps = video_capture.get(cv2.CAP_PROP_FPS)
-    if fps:
-        LOGGER.info('fps: %s', fps)
-        iterable = iter_delay_video_images_to_fps(iterable, fps=fps)
-    with ReadLatestThreadedReader(iterable) as reader:
-        yield from reader
-
-
 def iter_resize_video_images(
     video_images: Iterable[ImageArray],
     image_size: ImageSize = None,

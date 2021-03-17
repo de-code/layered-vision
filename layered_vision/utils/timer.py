@@ -1,4 +1,5 @@
 import logging
+from contextlib import contextmanager
 from time import time
 from typing import Dict, List, Optional
 
@@ -27,7 +28,11 @@ class LoggingTimer:
         current_time = time()
         self.interval_start_time = current_time
 
-    def _set_current_step_name(self, step_name: str, current_time: float = None):
+    def _set_current_step_name(
+        self,
+        step_name: Optional[str],
+        current_time: float = None
+    ):
         if step_name == self.current_step_name:
             return
         if current_time is None:
@@ -53,6 +58,15 @@ class LoggingTimer:
         if step_name == self.current_step_name:
             return
         self._set_current_step_name(step_name)
+
+    @contextmanager
+    def enter_step(self, step_name: str):
+        previous_step_name = self.current_step_name
+        try:
+            self.on_step_start(step_name)
+            yield
+        finally:
+            self._set_current_step_name(previous_step_name)
 
     def on_step_end(self):
         self._set_current_step_name(None)
