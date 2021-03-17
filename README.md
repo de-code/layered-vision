@@ -218,6 +218,8 @@ python -m layered_vision start \
 
 Note: you may need to specify the fps
 
+If a local configuration file was specified, the application will attempt to reload it on change.
+
 ### Docker Usage
 
 You could also use the Docker image if you prefer.
