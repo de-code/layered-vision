@@ -160,6 +160,7 @@ The following filters are currently supported:
 | `motion_blur` | Adds a motion blur to the image or channel. That could be used to make an alpha mask move more slowly |
 | `pixelate` | Pixelates the input. |
 | `invert` | Inverts the input. e.g. `black` to `white` |
+| `multiply` | Multiplies the input with a constant value. e.g. to adjust the `alpha` channel |
 
 Every *filter* may have additional properties. Please refer to the [examples](https://github.com/de-code/layered-vision/tree/develop/example-config) (or come back in the future) for more detailed information.
 
