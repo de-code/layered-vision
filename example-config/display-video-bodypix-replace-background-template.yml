@@ -55,6 +55,11 @@ layers:
         channel: alpha
         frame_count: 3
         decay: 0
+      - id: alpha_multiply
+        filter: multiply
+        channel: alpha
+        value: 0.8
+        enabled: false
       - id: pixelate
         filter: pixelate
         value: 0.1
