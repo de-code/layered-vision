@@ -161,8 +161,9 @@ The following filters are currently supported:
 | `pixelate` | Pixelates the input. |
 | `invert` | Inverts the input. e.g. `black` to `white` |
 | `multiply` | Multiplies the input with a constant value. e.g. to adjust the `alpha` channel |
+| `warp_perspective` | Warps the perspective of the input image given a list of `target_points`. e.g. to display it in a corner of the output image |
 
-Every *filter* may have additional properties. Please refer to the [examples](https://github.com/de-code/layered-vision/tree/develop/example-config) (or come back in the future) for more detailed information.
+Every *filter* may have additional properties. Please refer to the [examples](https://github.com/de-code/layered-vision/tree/develop/example-config) (or come back in the future) for more detailed information. In particular [display-video-bodypix-replace-background-template.yml](https://github.com/de-code/layered-vision/blob/develop/example-config/display-video-bodypix-replace-background-template.yml) provides examples of most filters (often disabled by default).
 
 ### Branches Layer
 
