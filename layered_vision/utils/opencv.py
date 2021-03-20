@@ -83,7 +83,10 @@ class ReadLatestThreadedReader:
     def __next__(self):
         if self.wait_for_data:
             return self.pop()
-        return self.peek()
+        data = self.peek()
+        if data is None:
+            raise StopIteration()
+        return data
 
     def start(self):
         self.thread.start()
