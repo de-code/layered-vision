@@ -119,6 +119,7 @@ The following inputs are currently supported:
 | image | Static image (e.g. `.png`) |
 | video | Video (e.g. `.mp4`) |
 | webcam | Linux Webcam (`/dev/videoN`) |
+| fill | Fills a new image with a color |
 | youtube | YouTube stream (e.g. `https://youtu.be/f0cGgOv3l4c`,  see [example config](https://github.com/de-code/layered-vision/tree/develop/example-config/display-video-bodypix-replace-background-youtube.yml)) |
 | mss | Screen capture using [mss](https://python-mss.readthedocs.io/index.html) (see [example config](https://github.com/de-code/layered-vision/tree/develop/example-config/display-video-bodypix-replace-background-mss.yml)) |
 
@@ -159,6 +160,7 @@ The following filters are currently supported:
 | `bilateral` | Applies a [bilateral filter](https://en.wikipedia.org/wiki/Bilateral_filter), using `d`, `sigma_color` and `sigma_space` parameters. |
 | `motion_blur` | Adds a motion blur to the image or channel. That could be used to make an alpha mask move more slowly |
 | `pixelate` | Pixelates the input. |
+| `fill` | Fills the input or a selected channel with a color / value. e.g. with `color` set to `blue` |
 | `invert` | Inverts the input. e.g. `black` to `white` |
 | `multiply` | Multiplies the input with a constant value. e.g. to adjust the `alpha` channel |
 | `warp_perspective` | Warps the perspective of the input image given a list of `target_points`. e.g. to display it in a corner of the output image |

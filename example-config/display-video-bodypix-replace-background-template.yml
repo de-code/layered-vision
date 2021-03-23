@@ -19,6 +19,14 @@ layers:
         repeat: true
         preload: true
     - layers:
+      - id: bg_fill
+        input_path: "fill:"
+        color: blue
+        repeat: true
+        resize_like_id: in
+        no_source: true
+        enabled: false
+    - layers:
       - id: bg2
         enabled: false
         no_source: true
