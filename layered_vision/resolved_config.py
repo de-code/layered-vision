@@ -1,6 +1,23 @@
+from enum import Enum
 from typing import Dict, List, Optional
 
 from layered_vision.config import AppConfig, LayerConfig
+
+
+class ResolvedLayerType(Enum):
+    INPUT_SOURCE = 1
+    OUTPUT_SINK = 2
+    FILTER = 3
+
+
+def get_resolved_layer_type(layer_config: LayerConfig) -> ResolvedLayerType:
+    if layer_config.get('filter'):
+        return ResolvedLayerType.FILTER
+    if layer_config.get('input_path'):
+        return ResolvedLayerType.INPUT_SOURCE
+    if layer_config.get('output_path'):
+        return ResolvedLayerType.OUTPUT_SINK
+    raise ValueError('unable to determine resolved layer type for: %s' % layer_config)
 
 
 class ResolvedLayerConfig(LayerConfig):
@@ -10,6 +27,7 @@ class ResolvedLayerConfig(LayerConfig):
         self.input_layers: List[ResolvedLayerConfig] = []
         if default_input_layer and not self.is_no_source:
             self.input_layers.append(default_input_layer)
+        self.resolved_layer_type = get_resolved_layer_type(self)
 
     @property
     def input_layer_ids(self):

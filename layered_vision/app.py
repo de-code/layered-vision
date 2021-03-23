@@ -1,5 +1,6 @@
 import logging
 import os
+from abc import ABC, abstractmethod
 from time import monotonic
 from contextlib import ExitStack
 from functools import partial
@@ -11,6 +12,7 @@ from .utils.image import (
     ImageArray,
     ImageSize,
     get_image_size,
+    resize_image_to,
     has_transparent_alpha,
     apply_alpha,
     combine_images
@@ -23,7 +25,7 @@ from .sinks.api import (
 )
 
 from .config import load_config, apply_config_override_map, AppConfig, LayerConfig, T_Value
-from .resolved_config import ResolvedAppConfig, ResolvedLayerConfig
+from .resolved_config import ResolvedAppConfig, ResolvedLayerConfig, ResolvedLayerType
 from .sources.api import get_image_source_for_path, T_ImageSource
 from .filters.api import FilterContext, LayerFilter, create_filter
 
@@ -57,11 +59,27 @@ class LayerException(RuntimeError):
     pass
 
 
+class LayerIds:
+    ON_ERROR = 'on_error'
+
+
+class ErrorHandler(ABC):
+    @abstractmethod
+    def on_error(
+        self,
+        layer: 'RuntimeLayer',
+        error: Exception,
+        source_image: Optional[ImageArray],
+    ) -> Optional[ImageArray]:
+        pass
+
+
 class RuntimeContext:
     def __init__(
         self,
         layer_by_id: Dict[str, 'RuntimeLayer'],
         timer: LoggingTimer,
+        error_handler: ErrorHandler,
         preferred_image_size: ImageSize = None,
         application_stopped_event: Event = None
     ):
@@ -70,6 +88,26 @@ class RuntimeContext:
         self.preferred_image_size = preferred_image_size
         self.frame_cache: dict = {}
         self.application_stopped_event = application_stopped_event
+        self.on_error_layer: Optional[RuntimeLayer] = None
+        self.error_handler: ErrorHandler = error_handler
+
+
+class DelegateErrorHandler(ErrorHandler):
+    def on_error(
+        self,
+        layer: 'RuntimeLayer',
+        error: Exception,
+        source_image: Optional[ImageArray],
+    ) -> Optional[ImageArray]:
+        on_error_layer = layer.context.on_error_layer
+        result: Optional[ImageArray] = None
+        if on_error_layer is not None and on_error_layer != layer:
+            result = next(on_error_layer)
+        if source_image is not None and result is not None:
+            result = resize_image_to(result, get_image_size(source_image))
+        if result is None:
+            raise error
+        return result
 
 
 class OutputSinkWrapper:
@@ -150,6 +188,13 @@ def get_image_source_for_layer_config(
     )
 
 
+def safe_close(closable):
+    if closable is not None:
+        closable.close()
+        closable = None
+    return closable
+
+
 class RuntimeLayer:
     def __init__(
         self,
@@ -164,26 +209,19 @@ class RuntimeLayer:
         self.layer_id = layer_id
         self.exit_stack = ExitStack()
         self.source_layers = (source_layers or []).copy()
-        self.image_source: Optional[ImageSourceWrapper] = None
-        self.output_sink_wrapper: Optional[OutputSinkWrapper] = None
-        self.filter: Optional[LayerFilter] = None
         self.context = context
+        self.previous_error: Optional[Exception] = None
+        self.is_output_layer = False
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args, **kwargs):
+        self.close()
         self.exit_stack.__exit__(*args, **kwargs)
-        if self.image_source is not None:
-            self.image_source.close()
-        self.image_source = None
-        if self.output_sink_wrapper is not None:
-            self.output_sink_wrapper.close()
-        self.output_sink_wrapper = None
-        self.filter = None
 
     def close(self):
-        self.__exit__(None, None, None)
+        pass
 
     def __repr__(self):
         return '%s(layer_config=%r, ...)' % (
@@ -191,7 +229,11 @@ class RuntimeLayer:
             self.layer_config
         )
 
+    def on_layer_config_changed(self):
+        pass
+
     def set_layer_config(self, layer_config: ResolvedLayerConfig):
+        self.previous_error = None
         if self.layer_config.props == layer_config.props:
             # replace layer config anyway, as it may include other resolved config information,
             # such as the source layers
@@ -202,14 +244,74 @@ class RuntimeLayer:
             layer_config.layer_id
         )
         self.layer_config = layer_config
-        if self.filter:
-            self.filter.set_config(layer_config)
-        if self.image_source or self.output_sink_wrapper:
-            self.close()
+        self.on_layer_config_changed()
+
+    def __iter__(self):
+        return self
+
+    @property
+    def source_lazy_image_list(self):
+        return LazyImageList([
+            partial(next, source_layer)
+            for source_layer in self.source_layers
+        ])
+
+    def get_error_image(
+        self, error: Exception, source_image: Optional[ImageArray]
+    ) -> Optional[ImageArray]:
+        result = self.context.error_handler.on_error(
+            self, error, source_image
+        )
+        if self.previous_error is None:
+            LOGGER.warning(
+                'failed to process filter for %r due to %s',
+                self.layer_config.layer_id,
+                error,
+                exc_info=error
+            )
+            self.previous_error = error
+        return result
+
+    def get_next_image(self):
+        raise LayerException('input not supported for layer: %s' % self)
+
+    def write(self, image_array: ImageArray):
+        raise LayerException('output not supported for layer: %s' % self)
+
+    def __next__(self):
+        try:
+            if not self.is_enabled:
+                return next(self.source_layers[0])
+            return self.get_next_image()
+        except (StopIteration, LayerException):
+            raise
+        except Exception as exc:
+            raise LayerException('failed to process layer %r due to %r' % (
+                self.layer_id, exc
+            )) from exc
+
+    @property
+    def is_enabled(self) -> bool:
+        return self.layer_config.get_bool('enabled', True)
+
+    @property
+    def resize_like_id(self) -> Optional[str]:
+        return self.layer_config.get_str('resize_like_id')
+
+
+class InputSourceRuntimeLayer(RuntimeLayer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.image_source: Optional[ImageSourceWrapper] = None
+
+    def close(self):
+        self.image_source = safe_close(self.image_source)
+
+    def on_layer_config_changed(self):
+        super().on_layer_config_changed()
+        self.close()
 
     def get_image_iterator(self) -> T_ImageSource:
-        if not self.is_input_layer:
-            raise RuntimeError('not an input layer: %r' % self)
         if self.image_source is not None:
             return self.image_source.image_iterator
         preferred_image_size = self.context.preferred_image_size
@@ -223,6 +325,97 @@ class RuntimeLayer:
         )
         self.image_source = image_source
         return image_source.image_iterator
+
+    def get_next_input_image(self):
+        image_array = self.context.frame_cache.get(self.layer_id)
+        if image_array is None:
+            image_array = next(self.get_image_iterator())
+            if has_transparent_alpha(image_array) and self.source_layers:
+                source_image = next(self.source_layers[0])
+                self.context.timer.on_step_start(self.layer_id + '.combine')
+                image_array = combine_images([source_image] + [image_array])
+            self.context.frame_cache[self.layer_id] = image_array
+        if self.context.preferred_image_size is None:
+            image_size = get_image_size(image_array)
+            LOGGER.info('setting preferred image size to: %s', image_size)
+            self.context.preferred_image_size = image_size
+        return image_array
+
+    def get_next_image(self):
+        try:
+            with self.context.timer.enter_step(self.layer_id):
+                if self.previous_error:
+                    raise LayerException(
+                        'layer %r failed before' % self.layer_config.layer_id
+                    ) from self.previous_error
+                return self.get_next_input_image()
+        except Exception as exc:  # pylint: disable=broad-except
+            return self.get_error_image(exc, source_image=None)
+
+
+class FilterRuntimeLayer(RuntimeLayer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.filter: Optional[LayerFilter] = None
+
+    def close(self):
+        self.filter = safe_close(self.filter)
+
+    def on_layer_config_changed(self):
+        super().on_layer_config_changed()
+        try:
+            if self.filter:
+                self.filter.set_config(self.layer_config)
+        except Exception as exc:  # pylint: disable=broad-except
+            LOGGER.warning(
+                'failed to update filter config for %r due to %s',
+                self.layer_config.layer_id,
+                exc,
+                exc_info=exc
+            )
+            self.filter = safe_close(self.filter)
+
+    def get_filter(self) -> LayerFilter:
+        if self.filter is not None:
+            return self.filter
+        _filter = create_filter(
+            self.layer_config,
+            filter_context=FilterContext(timer=self.context.timer)
+        )
+        self.filter = _filter
+        return _filter
+
+    def get_filter_image(self, source_image):
+        try:
+            if self.previous_error:
+                raise LayerException(
+                    'layer %r failed before' % self.layer_config.layer_id
+                ) from self.previous_error
+            return self.get_filter().filter(source_image)
+        except Exception as exc:  # pylint: disable=broad-except
+            return self.get_error_image(exc, source_image)
+
+    def get_next_image(self):
+        with self.context.timer.enter_step(self.layer_id):
+            return self.get_filter_image(self.source_lazy_image_list)
+
+
+class OutputSinkRuntimeLayer(RuntimeLayer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.output_sink_wrapper: Optional[OutputSinkWrapper] = None
+        self.is_output_layer = True
+
+    def close(self):
+        self.output_sink_wrapper = safe_close(self.output_sink_wrapper)
+
+    def write(self, image_array: ImageArray):
+        image_array = apply_alpha(image_array)
+        LOGGER.debug('output shape: %s', image_array.shape)
+        self.get_output_sink()(image_array)
+
+    def on_layer_config_changed(self):
+        self.close()
 
     def get_output_sink(self) -> T_OutputSink:
         if not self.is_output_layer:
@@ -238,84 +431,19 @@ class RuntimeLayer:
             )
         return self.output_sink_wrapper.output_sink
 
-    def get_filter(self) -> LayerFilter:
-        if self.filter is not None:
-            return self.filter
-        if not self.is_filter_layer:
-            raise RuntimeError('not an output layer')
-        _filter = create_filter(
-            self.layer_config,
-            filter_context=FilterContext(timer=self.context.timer)
-        )
-        self.filter = _filter
-        return _filter
 
-    def __iter__(self):
-        return self
-
-    @property
-    def source_lazy_image_list(self):
-        return LazyImageList([
-            partial(next, source_layer)
-            for source_layer in self.source_layers
-        ])
-
-    def __next__(self):
-        try:
-            if not self.is_enabled:
-                return next(self.source_layers[0])
-            if self.is_filter_layer:
-                with self.context.timer.enter_step(self.layer_id):
-                    return self.get_filter().filter(self.source_lazy_image_list)
-            with self.context.timer.enter_step(self.layer_id):
-                image_array = self.context.frame_cache.get(self.layer_id)
-                if image_array is None:
-                    image_array = next(self.get_image_iterator())
-                    if has_transparent_alpha(image_array) and self.source_layers:
-                        source_image = next(self.source_layers[0])
-                        self.context.timer.on_step_start(self.layer_id + '.combine')
-                        image_array = combine_images([source_image] + [image_array])
-                    self.context.frame_cache[self.layer_id] = image_array
-                if self.context.preferred_image_size is None:
-                    image_size = get_image_size(image_array)
-                    LOGGER.info('setting preferred image size to: %s', image_size)
-                    self.context.preferred_image_size = image_size
-                return image_array
-        except (StopIteration, LayerException):
-            raise
-        except Exception as exc:
-            raise LayerException('failed to process layer %r due to %r' % (
-                self.layer_id, exc
-            )) from exc
-
-    def write(self, image_array: ImageArray):
-        image_array = apply_alpha(image_array)
-        LOGGER.debug('output shape: %s', image_array.shape)
-        self.get_output_sink()(image_array)
-
-    @property
-    def is_enabled(self) -> bool:
-        return self.layer_config.get_bool('enabled', True)
-
-    @property
-    def is_no_source(self) -> bool:
-        return self.layer_config.get_bool('no_source', False)
-
-    @property
-    def is_output_layer(self) -> bool:
-        return bool(self.layer_config.props.get('output_path'))
-
-    @property
-    def is_input_layer(self) -> bool:
-        return bool(self.layer_config.props.get('input_path'))
-
-    @property
-    def is_filter_layer(self) -> bool:
-        return bool(self.layer_config.props.get('filter'))
-
-    @property
-    def resize_like_id(self) -> Optional[str]:
-        return self.layer_config.get_str('resize_like_id')
+def create_runtime_layer(
+    layer_config: ResolvedLayerConfig,
+    **kwargs
+) -> RuntimeLayer:
+    layer_type = layer_config.resolved_layer_type
+    if layer_type == ResolvedLayerType.INPUT_SOURCE:
+        return InputSourceRuntimeLayer(layer_config=layer_config, **kwargs)
+    if layer_type == ResolvedLayerType.FILTER:
+        return FilterRuntimeLayer(layer_config=layer_config, **kwargs)
+    if layer_type == ResolvedLayerType.OUTPUT_SINK:
+        return OutputSinkRuntimeLayer(layer_config=layer_config, **kwargs)
+    raise RuntimeError('unrecognised layer type: %s' % layer_type)
 
 
 class LayeredVisionApp:
@@ -323,8 +451,11 @@ class LayeredVisionApp:
         self,
         config_path: str,
         override_map: Dict[str, Dict[str, T_Value]] = None,
-        min_config_reload_secs: float = 1.0
+        min_config_reload_secs: float = 1.0,
+        error_handler: ErrorHandler = None
     ):
+        if error_handler is None:
+            error_handler = DelegateErrorHandler()
         self.config_path = config_path
         self.config_modified_time = 0
         self.override_map = override_map
@@ -336,7 +467,8 @@ class LayeredVisionApp:
         self.context = RuntimeContext(
             layer_by_id=self.layer_by_id,
             timer=self.timer,
-            application_stopped_event=self.application_stopped_event
+            application_stopped_event=self.application_stopped_event,
+            error_handler=error_handler
         )
         self.min_config_reload_secs = min_config_reload_secs
         self.config_last_checked_time = monotonic()
@@ -368,6 +500,11 @@ class LayeredVisionApp:
     def reload_config(self):
         self.load()
 
+    def remove_layer_by_id(self, layer_id: str):
+        LOGGER.info('removing layer: id=%r', layer_id)
+        self.layer_by_id[layer_id].close()
+        del self.layer_by_id[layer_id]
+
     def set_resolved_app_config(self, resolved_app_config: ResolvedAppConfig):
         had_layers = bool(self.layer_by_id)
         layers = resolved_app_config.layers
@@ -376,19 +513,30 @@ class LayeredVisionApp:
         for layer_index, layer_config in enumerate(layers):
             layer_id = layer_config.layer_id
             runtime_layer = self.layer_by_id.get(layer_id)
-            if not runtime_layer:
+
+            if (
+                runtime_layer
+                and (
+                    runtime_layer.layer_config.resolved_layer_type
+                    != layer_config.resolved_layer_type
+                )
+            ):
+                self.remove_layer_by_id(layer_id)
+                runtime_layer = None
+
+            if runtime_layer:
+                runtime_layer.set_layer_config(layer_config)
+            else:
                 if had_layers:
                     LOGGER.info('adding layer: id=%r', layer_id)
-                runtime_layer = self.exit_stack.enter_context(RuntimeLayer(
-                    layer_index,
-                    layer_config,
+                runtime_layer = self.exit_stack.enter_context(create_runtime_layer(
+                    layer_index=layer_index,
+                    layer_config=layer_config,
                     layer_id=layer_id,
                     context=self.context
                 ))
                 assert runtime_layer
                 self.layer_by_id[layer_id] = runtime_layer
-            else:
-                runtime_layer.set_layer_config(layer_config)
             runtime_layers.append(runtime_layer)
         for runtime_layer in runtime_layers:
             runtime_layer.source_layers = [
@@ -398,9 +546,7 @@ class LayeredVisionApp:
         seen_layer_ids = {runtime_layer.layer_id for runtime_layer in runtime_layers}
         removed_layer_ids = set(self.layer_by_id.keys()) - seen_layer_ids
         for layer_id in removed_layer_ids:
-            LOGGER.info('removing layer: id=%r', layer_id)
-            self.layer_by_id[layer_id].close()
-            del self.layer_by_id[layer_id]
+            self.remove_layer_by_id(layer_id)
         self.output_runtime_layers = [
             runtime_layer
             for runtime_layer in runtime_layers
@@ -416,6 +562,7 @@ class LayeredVisionApp:
             )
             for output_runtime_layer in self.output_runtime_layers
         ])
+        self.context.on_error_layer = self.layer_by_id.get(LayerIds.ON_ERROR)
 
     def set_app_config(self, app_config: AppConfig):
         LOGGER.info('config: %s', app_config)
@@ -449,11 +596,14 @@ class LayeredVisionApp:
         self.timer.on_frame_end()
         return True
 
-    def run(self):
+    def run(self, max_iterations: int = None):
         try:
             self.timer.start()
-            while self.next_frame():
-                pass
+            iteration = 0
+            while max_iterations is None or iteration < max_iterations:
+                if not self.next_frame():
+                    break
+                iteration += 1
         except KeyboardInterrupt:
             LOGGER.info('exiting')
             self.application_stopped_event.set()

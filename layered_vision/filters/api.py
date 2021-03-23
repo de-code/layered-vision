@@ -38,6 +38,9 @@ class LayerFilter(ABC):
     def set_config(self, layer_config: LayerConfig):
         pass
 
+    def close(self):
+        pass
+
 
 class AbstractLayerFilter(LayerFilter):
     def __init__(

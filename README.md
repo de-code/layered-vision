@@ -173,6 +173,22 @@ The input to each set of *branch layers* is the input to the *branches* layer.
 The *branches* are then combined (added on top of each other).
 To make *branches* useful, at least the last *branch image* should have an alpha mask.
 
+### Error Handling
+
+By default, any error such as an invalid path or filter parameter,
+will result in an exception being thrown, causing the application to exit.
+
+To instead display an image, you could define an input layer with the id `on_error`:
+
+```yaml
+layers:
+  - id: on_error
+    # Source: https://pixabay.com/vectors/test-pattern-tv-tv-test-pattern-152459/
+    input_path: "https://www.dropbox.com/s/29ycjg9ubht776y/test-pattern-152459_640.png?dl=1"
+    repeat: true
+  # ...
+```
+
 ## CLI
 
 ### CLI Help
