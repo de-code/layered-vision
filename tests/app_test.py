@@ -228,3 +228,56 @@ class TestAppEndToEnd:
 
             output_image = read_image(output_path)
             np.testing.assert_array_equal(output_image, GREEN_IMAGE)
+
+    def test_should_fallback_to_error_image_for_input(
+        self, temp_dir: Path,
+        red_image_file: Path
+    ):
+        output_path = temp_dir / 'output.png'
+        config_file = temp_dir / 'config.yml'
+        config: dict = {
+            'layers': [{
+                'id': 'on_error',
+                'input_path': str(red_image_file)
+            }, {
+                'id': 'in',
+                'input_path': str(temp_dir / 'invalid')
+            }, {
+                'id': 'out',
+                'output_path': str(output_path)
+            }]
+        }
+        config_file.write_text(_get_yaml_text(config))
+        with LayeredVisionApp(str(config_file)) as app:
+            app.run()
+            output_image = read_image(output_path)
+            np.testing.assert_array_equal(output_image, RED_IMAGE)
+
+    def test_should_fallback_to_error_image_for_filter(
+        self, temp_dir: Path,
+        red_image_file: Path,
+        green_image_file: Path
+    ):
+        output_path = temp_dir / 'output.png'
+        config_file = temp_dir / 'config.yml'
+        config: dict = {
+            'layers': [{
+                'id': 'on_error',
+                'input_path': str(red_image_file),
+                'repeat': True
+            }, {
+                'id': 'in',
+                'input_path': str(green_image_file)
+            }, {
+                'id': 'filter',
+                'filter': 'invalid'
+            }, {
+                'id': 'out',
+                'output_path': str(output_path)
+            }]
+        }
+        config_file.write_text(_get_yaml_text(config))
+        with LayeredVisionApp(str(config_file)) as app:
+            app.run(1)
+            output_image = read_image(output_path)
+            np.testing.assert_array_equal(output_image, RED_IMAGE)
