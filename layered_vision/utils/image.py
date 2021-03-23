@@ -19,6 +19,9 @@ class SimpleImageArray:
     def __getitem__(self, *args) -> Union['SimpleImageArray', int, float]:
         pass
 
+    def astype(self, dtype: Any) -> 'SimpleImageArray':
+        pass
+
 
 ImageArray = Union[np.ndarray, SimpleImageArray]
 
