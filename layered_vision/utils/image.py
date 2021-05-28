@@ -194,13 +194,11 @@ def combine_images(
             if not reuse_image_buffer or np.issubdtype(combined_image.dtype, np.integer):
                 combined_image = np.multiply(combined_image, 1 - image2_alpha)
             else:
-                np.multiply(combined_image, 1 - image2_alpha, out=combined_image)  #, casting='unsafe')
+                np.multiply(combined_image, 1 - image2_alpha, out=combined_image)
         else:
             combined_image = np.multiply(visible_images[0], 1 - image2_alpha)
         if reuse_image_buffer:
             combined_image = np.add(combined_image, image2[:, :, :3] * image2_alpha)
         else:
-            np.add(
-                combined_image, image2[:, :, :3] * image2_alpha, out=combined_image  #, casting='unsafe'
-            )
+            np.add(combined_image, image2[:, :, :3] * image2_alpha, out=combined_image)
     return combined_image
