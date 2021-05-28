@@ -143,6 +143,15 @@ def combine_two_images(image1: ImageArray, image2: ImageArray) -> ImageArray:
     ))
 
 
+def multiply_with(
+    image1: ImageArray, image2: ImageArray, reuse_first_buffer: bool = False
+) -> ImageArray:
+    if not reuse_first_buffer or np.issubdtype(image1.dtype, np.integer):
+        return np.multiply(image1, image2)
+    np.multiply(image1, image2, out=image1)
+    return image1
+
+
 def combine_images(
     images: List[ImageArray],
     fixed_alpha_enabled: bool = True,
@@ -191,10 +200,10 @@ def combine_images(
                 continue
         image2_alpha = np.expand_dims(image2_raw_alpha, -1) / 255
         if combined_image is not None:
-            if not reuse_image_buffer or np.issubdtype(combined_image.dtype, np.integer):
-                combined_image = np.multiply(combined_image, 1 - image2_alpha)
-            else:
-                np.multiply(combined_image, 1 - image2_alpha, out=combined_image)
+            combined_image = multiply_with(
+                combined_image, 1 - image2_alpha,
+                reuse_first_buffer=reuse_image_buffer
+            )
         else:
             combined_image = np.multiply(visible_images[0], 1 - image2_alpha)
         if reuse_image_buffer:
