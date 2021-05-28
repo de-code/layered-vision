@@ -206,8 +206,9 @@ def combine_images(
             )
         else:
             combined_image = np.multiply(visible_images[0], 1 - image2_alpha)
-        if reuse_image_buffer:
-            combined_image = np.add(combined_image, image2[:, :, :3] * image2_alpha)
-        else:
-            np.add(combined_image, image2[:, :, :3] * image2_alpha, out=combined_image)
+        combined_image = np.add(
+            combined_image,
+            image2[:, :, :3] * image2_alpha,
+            out=combined_image if reuse_image_buffer else None
+        )
     return combined_image
