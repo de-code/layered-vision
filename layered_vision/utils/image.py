@@ -1,6 +1,6 @@
 import logging
 from collections import Counter, namedtuple
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
@@ -164,10 +164,14 @@ def combine_images(
         raise ValueError('image sizes mismatch: %s' % image_sizes)
     LOGGER.debug('visible_images shapes: %s', [image.shape for image in visible_images])
     visible_images[0] = apply_alpha(visible_images[0])
-    combined_image = None
+    combined_image: Optional[ImageArray] = None
     for image2 in visible_images[1:]:
         image2 = np.asarray(image2)
         image2_raw_alpha = image2[:, :, 3]
+        LOGGER.debug(
+            'combined_image dtype: %s',
+            combined_image.dtype if combined_image is not None else None
+        )
         if fixed_alpha_enabled:
             image2_fixed_alpha = image2_raw_alpha[0, 0]
             if np.all(image2_fixed_alpha == image2_raw_alpha):
@@ -186,8 +190,13 @@ def combine_images(
                 continue
         image2_alpha = np.expand_dims(image2_raw_alpha, -1) / 255
         if combined_image is not None:
-            np.multiply(combined_image, 1 - image2_alpha, out=combined_image)
+            if np.issubdtype(combined_image.dtype, np.integer):
+                combined_image = np.multiply(combined_image, 1 - image2_alpha)
+            else:
+                np.multiply(combined_image, 1 - image2_alpha, out=combined_image)  #, casting='unsafe')
         else:
             combined_image = np.multiply(visible_images[0], 1 - image2_alpha)
-        np.add(combined_image, image2[:, :, :3] * image2_alpha, out=combined_image)
+        np.add(
+            combined_image, image2[:, :, :3] * image2_alpha, out=combined_image  #, casting='unsafe'
+        )
     return combined_image

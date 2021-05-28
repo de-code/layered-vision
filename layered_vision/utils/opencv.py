@@ -8,7 +8,7 @@ from typing import (
     Callable, ContextManager, Deque, Iterable, Iterator,
     Generic,
     Optional,
-    TypeVar
+    TypeVar,
     # T
 )
 
@@ -26,6 +26,56 @@ DEFAULT_WEBCAM_FOURCC = 'MJPG'
 
 
 T = TypeVar('T')
+
+
+class VideoCaptureWrapper(cv2.VideoCapture):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._released = False
+        self._reading_count = 0
+        self._not_reading_event = Event()
+
+    def release(self):
+        if self._released:
+            LOGGER.warning('attempting to release already release video capture')
+            return
+        self._released = True
+        if self._reading_count > 0:
+            LOGGER.warning(
+                'releasing video capture while reading is in progress (%d)',
+                self._reading_count
+            )
+            self._not_reading_event.wait(10)
+        LOGGER.info('releasing video capture')
+        super().release()
+
+    def read(self):
+        if self._released:
+            LOGGER.warning('attempting to read already release video capture')
+            return False, None
+        if not self.isOpened():
+            LOGGER.warning('attempting to read closed video capture')
+            return False, None
+        try:
+            self._reading_count += 1
+            self._not_reading_event.clear()
+            return super().read()
+        finally:
+            self._reading_count -= 1
+            if self._reading_count == 0:
+                self._not_reading_event.set()
+
+    def get(self, propId):
+        if self._released:
+            LOGGER.warning('attempting to get property of release video capture')
+            return 0
+        return super().get(propId)
+
+    def set(self, propId, value):
+        if self._released:
+            LOGGER.warning('attempting to set property of release video capture')
+            return
+        super().set(propId, value)
 
 
 class WaitingDeque(Generic[T]):
@@ -192,7 +242,7 @@ def iter_delay_video_images_to_fps(
         start_frame_time = end_frame_time
         # attempt to retrieve the next frame (that may vary in time)
         try:
-            image_array = next(video_images_iterator)
+            image_array = np.copy(next(video_images_iterator))
         except StopIteration:
             return
         # wait time until delivery in order to achieve a similar fps
@@ -273,7 +323,7 @@ def get_video_image_source(  # pylint: disable=too-many-locals
         LOGGER.info('loading video: %r (downloaded from %r)', local_path, path)
     else:
         LOGGER.info('loading video: %r', path)
-    video_capture = cv2.VideoCapture(local_path)
+    video_capture = VideoCaptureWrapper(local_path)
     if fourcc:
         LOGGER.info('setting video fourcc to %r', fourcc)
         video_capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*fourcc))

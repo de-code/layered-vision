@@ -89,3 +89,12 @@ class TestCombineImages:
             (IMAGE_DATA_1 * 0.5 + IMAGE_DATA_2 * 0.5) * 0.5
             + IMAGE_DATA_3 * 0.5
         ), rtol=0.1)
+
+    def _test_should_not_fail_using_fixed_alpha_enabled_and_float32_dtype(self):
+        image_data_3_with_multiple_alpha = add_alpha_channel(IMAGE_DATA_3, 0.5)
+        image_data_3_with_multiple_alpha[0, 0, 3] = 123
+        combine_images([
+            IMAGE_DATA_1.astype(np.uint8),
+            add_alpha_channel(IMAGE_DATA_2, 0.5).astype(np.uint8),
+            image_data_3_with_multiple_alpha.astype(np.float32)
+        ], fixed_alpha_enabled=True)
