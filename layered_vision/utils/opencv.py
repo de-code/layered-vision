@@ -28,12 +28,13 @@ DEFAULT_WEBCAM_FOURCC = 'MJPG'
 T = TypeVar('T')
 
 
-class VideoCaptureWrapper(cv2.VideoCapture):
+# Note: extending cv2.VideoCapture seem to cause core dumps
+class VideoCaptureWrapper:
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self._released = False
         self._reading_count = 0
         self._not_reading_event = Event()
+        self.video_capture = cv2.VideoCapture(*args, **kwargs)
 
     def release(self):
         if self._released:
@@ -47,19 +48,19 @@ class VideoCaptureWrapper(cv2.VideoCapture):
             )
             self._not_reading_event.wait(10)
         LOGGER.info('releasing video capture')
-        super().release()
+        self.video_capture.release()
 
     def read(self):
         if self._released:
             LOGGER.warning('attempting to read already release video capture')
             return False, None
-        if not self.isOpened():
+        if not self.video_capture.isOpened():
             LOGGER.warning('attempting to read closed video capture')
             return False, None
         try:
             self._reading_count += 1
             self._not_reading_event.clear()
-            return super().read()
+            return self.video_capture.read()
         finally:
             self._reading_count -= 1
             if self._reading_count == 0:
@@ -69,13 +70,13 @@ class VideoCaptureWrapper(cv2.VideoCapture):
         if self._released:
             LOGGER.warning('attempting to get property of release video capture')
             return 0
-        return super().get(propId)
+        return self.video_capture.get(propId)
 
     def set(self, propId, value):
         if self._released:
             LOGGER.warning('attempting to set property of release video capture')
             return
-        super().set(propId, value)
+        self.video_capture.set(propId, value)
 
 
 class WaitingDeque(Generic[T]):
@@ -324,6 +325,7 @@ def get_video_image_source(  # pylint: disable=too-many-locals
     else:
         LOGGER.info('loading video: %r', path)
     video_capture = VideoCaptureWrapper(local_path)
+    # video_capture = cv2.VideoCapture(local_path)
     if fourcc:
         LOGGER.info('setting video fourcc to %r', fourcc)
         video_capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*fourcc))
