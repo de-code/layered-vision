@@ -146,10 +146,12 @@ def combine_two_images(image1: ImageArray, image2: ImageArray) -> ImageArray:
 def multiply_with(
     image1: ImageArray, image2: ImageArray, reuse_first_buffer: bool = False
 ) -> ImageArray:
-    if not reuse_first_buffer or np.issubdtype(image1.dtype, np.integer):
-        return np.multiply(image1, image2)
-    np.multiply(image1, image2, out=image1)
-    return image1
+    can_reuse = reuse_first_buffer and not np.issubdtype(image1.dtype, np.integer)
+    return np.multiply(
+        image1,
+        image2,
+        out=image1 if can_reuse else None
+    )
 
 
 def combine_images(
