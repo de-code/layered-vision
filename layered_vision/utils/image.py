@@ -157,6 +157,44 @@ def safe_multiply(
     )
 
 
+def combine_two_images_with_alpha(
+    image1: ImageArray,
+    image2: ImageArray,
+    out: Optional[ImageArray] = None,
+    fixed_alpha_enabled: bool = True,
+    reuse_image_buffer: bool = True
+):
+    image2 = np.asarray(image2)
+    image2_raw_alpha = image2[:, :, 3]
+    LOGGER.debug('out dtype: %s', out.dtype if out is not None else None)
+    if fixed_alpha_enabled:
+        image2_fixed_alpha = image2_raw_alpha[0, 0]
+        if np.all(image2_fixed_alpha == image2_raw_alpha):
+            # shortcut for where the alpha channel has the same value
+            LOGGER.debug('same alpha: %s', image2_fixed_alpha)
+            image2_fixed_alpha /= 255
+            return cv2.addWeighted(
+                src1=image1,
+                alpha=1 - image2_fixed_alpha,
+                src2=image2[:, :, :3],
+                beta=image2_fixed_alpha,
+                gamma=0,
+                dtype=3,
+                dst=out
+            )
+    image2_alpha = np.expand_dims(image2_raw_alpha, -1) / 255
+    combined_image = safe_multiply(
+        image1,
+        1 - image2_alpha,
+        out=out if reuse_image_buffer else None
+    )
+    return np.add(
+        combined_image,
+        image2[:, :, :3] * image2_alpha,
+        out=combined_image if reuse_image_buffer else None
+    )
+
+
 def combine_images(
     images: List[ImageArray],
     fixed_alpha_enabled: bool = True,
@@ -181,38 +219,12 @@ def combine_images(
     visible_images[0] = apply_alpha(visible_images[0])
     combined_image: Optional[ImageArray] = None
     for image2 in visible_images[1:]:
-        image2 = np.asarray(image2)
-        image2_raw_alpha = image2[:, :, 3]
-        LOGGER.debug(
-            'combined_image dtype: %s',
-            combined_image.dtype if combined_image is not None else None
-        )
         source_image = visible_images[0] if combined_image is None else combined_image
-        if fixed_alpha_enabled:
-            image2_fixed_alpha = image2_raw_alpha[0, 0]
-            if np.all(image2_fixed_alpha == image2_raw_alpha):
-                # shortcut for where the alpha channel has the same value
-                LOGGER.debug('same alpha: %s', image2_fixed_alpha)
-                image2_fixed_alpha /= 255
-                combined_image = cv2.addWeighted(
-                    src1=source_image,
-                    alpha=1 - image2_fixed_alpha,
-                    src2=image2[:, :, :3],
-                    beta=image2_fixed_alpha,
-                    gamma=0,
-                    dtype=3,
-                    dst=combined_image
-                )
-                continue
-        image2_alpha = np.expand_dims(image2_raw_alpha, -1) / 255
-        combined_image = safe_multiply(
+        combined_image = combine_two_images_with_alpha(
             source_image,
-            1 - image2_alpha,
-            out=combined_image if reuse_image_buffer else None
-        )
-        combined_image = np.add(
-            combined_image,
-            image2[:, :, :3] * image2_alpha,
-            out=combined_image if reuse_image_buffer else None
+            image2,
+            out=combined_image,
+            fixed_alpha_enabled=fixed_alpha_enabled,
+            reuse_image_buffer=reuse_image_buffer
         )
     return combined_image
