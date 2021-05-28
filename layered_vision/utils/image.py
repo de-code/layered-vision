@@ -143,14 +143,17 @@ def combine_two_images(image1: ImageArray, image2: ImageArray) -> ImageArray:
     ))
 
 
-def multiply_with(
-    image1: ImageArray, image2: ImageArray, reuse_first_buffer: bool = False
+def safe_multiply(
+    image1: ImageArray, image2: ImageArray,
+    out: Optional[ImageArray] = None
 ) -> ImageArray:
-    can_reuse = reuse_first_buffer and not np.issubdtype(image1.dtype, np.integer)
+    if out is not None and np.issubdtype(out.dtype, np.integer):
+        LOGGER.debug('out image has integer type, which is not compatible')
+        out = None
     return np.multiply(
         image1,
         image2,
-        out=image1 if can_reuse else None
+        out=out
     )
 
 
@@ -184,6 +187,7 @@ def combine_images(
             'combined_image dtype: %s',
             combined_image.dtype if combined_image is not None else None
         )
+        source_image = visible_images[0] if combined_image is None else combined_image
         if fixed_alpha_enabled:
             image2_fixed_alpha = image2_raw_alpha[0, 0]
             if np.all(image2_fixed_alpha == image2_raw_alpha):
@@ -191,7 +195,7 @@ def combine_images(
                 LOGGER.debug('same alpha: %s', image2_fixed_alpha)
                 image2_fixed_alpha /= 255
                 combined_image = cv2.addWeighted(
-                    src1=visible_images[0] if combined_image is None else combined_image,
+                    src1=source_image,
                     alpha=1 - image2_fixed_alpha,
                     src2=image2[:, :, :3],
                     beta=image2_fixed_alpha,
@@ -201,13 +205,11 @@ def combine_images(
                 )
                 continue
         image2_alpha = np.expand_dims(image2_raw_alpha, -1) / 255
-        if combined_image is not None:
-            combined_image = multiply_with(
-                combined_image, 1 - image2_alpha,
-                reuse_first_buffer=reuse_image_buffer
-            )
-        else:
-            combined_image = np.multiply(visible_images[0], 1 - image2_alpha)
+        combined_image = safe_multiply(
+            source_image,
+            1 - image2_alpha,
+            out=combined_image if reuse_image_buffer else None
+        )
         combined_image = np.add(
             combined_image,
             image2[:, :, :3] * image2_alpha,

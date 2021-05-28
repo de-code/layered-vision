@@ -5,7 +5,7 @@ from layered_vision.utils.image import (
     has_alpha,
     has_transparent_alpha,
     get_image_with_alpha,
-    multiply_with,
+    safe_multiply,
     combine_images
 )
 
@@ -43,19 +43,19 @@ class TestHasTransparentAlpha:
         assert has_transparent_alpha(add_alpha_channel(IMAGE_DATA_1, 0.5))
 
 
-class TestMultiplyWith:
+class TestSafeMultiply:
     def test_should_multiply_float32_with_float32_array(self):
         image1 = np.array([1, 2, 3], dtype=np.float32)
         image2 = np.array([0.5, 0.5, 0.5], dtype=np.float32)
-        assert multiply_with(
-            image1, image2, reuse_first_buffer=True
+        assert safe_multiply(
+            image1, image2, out=image1
         ).tolist() == [0.5, 1.0, 1.5]
 
     def test_should_multiply_int_with_float32_array(self):
         image1 = np.array([1, 2, 3], dtype=np.int)
         image2 = np.array([0.5, 0.5, 0.5], dtype=np.float32)
-        assert multiply_with(
-            image1, image2, reuse_first_buffer=True
+        assert safe_multiply(
+            image1, image2, out=image1
         ).tolist() == [0.5, 1.0, 1.5]
 
 
