@@ -55,7 +55,7 @@ dev-lint: dev-flake8 dev-pylint dev-mypy
 
 
 dev-pytest:
-	$(PYTHON) -m pytest -p no:cacheprovider $(ARGS)
+	$(PYTHON) -m pytest -v -p no:cacheprovider $(ARGS)
 
 
 dev-watch:
