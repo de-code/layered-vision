@@ -324,7 +324,6 @@ def get_video_image_source(  # pylint: disable=too-many-locals
     else:
         LOGGER.info('loading video: %r', path)
     video_capture = VideoCaptureWrapper(local_path)
-    # video_capture = cv2.VideoCapture(local_path)
     if fourcc:
         LOGGER.info('setting video fourcc to %r', fourcc)
         video_capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*fourcc))
