@@ -59,7 +59,6 @@ class FillFilter(AbstractOptionalChannelFilter):
             return cv2.fillPoly(
                 np.array(image_array, dtype=np.float),
                 pts=[poly_points],
-                # color=(0, 0, 0)
                 color=config.value if color_channels == 1 else config.color.tolist()
             )
         if color_channels == 1:
