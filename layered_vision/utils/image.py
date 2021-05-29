@@ -1,6 +1,6 @@
 import logging
 from collections import Counter, namedtuple
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
@@ -143,9 +143,62 @@ def combine_two_images(image1: ImageArray, image2: ImageArray) -> ImageArray:
     ))
 
 
+def safe_multiply(
+    image1: ImageArray, image2: ImageArray,
+    out: Optional[ImageArray] = None
+) -> ImageArray:
+    if out is not None and np.issubdtype(out.dtype, np.integer):
+        LOGGER.debug('out image has integer type, which is not compatible')
+        out = None
+    return np.multiply(
+        image1,
+        image2,
+        out=out
+    )
+
+
+def combine_two_images_with_alpha(
+    image1: ImageArray,
+    image2: ImageArray,
+    out: Optional[ImageArray] = None,
+    fixed_alpha_enabled: bool = True,
+    reuse_image_buffer: bool = True
+):
+    image2 = np.asarray(image2)
+    image2_raw_alpha = image2[:, :, 3]
+    LOGGER.debug('out dtype: %s', out.dtype if out is not None else None)
+    if fixed_alpha_enabled:
+        image2_fixed_alpha = image2_raw_alpha[0, 0]
+        if np.all(image2_fixed_alpha == image2_raw_alpha):
+            # shortcut for where the alpha channel has the same value
+            LOGGER.debug('same alpha: %s', image2_fixed_alpha)
+            image2_fixed_alpha /= 255
+            return cv2.addWeighted(
+                src1=image1,
+                alpha=1 - image2_fixed_alpha,
+                src2=image2[:, :, :3],
+                beta=image2_fixed_alpha,
+                gamma=0,
+                dtype=3,
+                dst=out
+            )
+    image2_alpha = np.expand_dims(image2_raw_alpha, -1) / 255
+    combined_image = safe_multiply(
+        image1,
+        1 - image2_alpha,
+        out=out if reuse_image_buffer else None
+    )
+    return np.add(
+        combined_image,
+        image2[:, :, :3] * image2_alpha,
+        out=combined_image if reuse_image_buffer else None
+    )
+
+
 def combine_images(
     images: List[ImageArray],
-    fixed_alpha_enabled: bool = True
+    fixed_alpha_enabled: bool = True,
+    reuse_image_buffer: bool = True
 ) -> ImageArray:
     if not images:
         return None
@@ -164,30 +217,14 @@ def combine_images(
         raise ValueError('image sizes mismatch: %s' % image_sizes)
     LOGGER.debug('visible_images shapes: %s', [image.shape for image in visible_images])
     visible_images[0] = apply_alpha(visible_images[0])
-    combined_image = None
+    combined_image: Optional[ImageArray] = None
     for image2 in visible_images[1:]:
-        image2 = np.asarray(image2)
-        image2_raw_alpha = image2[:, :, 3]
-        if fixed_alpha_enabled:
-            image2_fixed_alpha = image2_raw_alpha[0, 0]
-            if np.all(image2_fixed_alpha == image2_raw_alpha):
-                # shortcut for where the alpha channel has the same value
-                LOGGER.debug('same alpha: %s', image2_fixed_alpha)
-                image2_fixed_alpha /= 255
-                combined_image = cv2.addWeighted(
-                    src1=visible_images[0] if combined_image is None else combined_image,
-                    alpha=1 - image2_fixed_alpha,
-                    src2=image2[:, :, :3],
-                    beta=image2_fixed_alpha,
-                    gamma=0,
-                    dtype=3,
-                    dst=combined_image
-                )
-                continue
-        image2_alpha = np.expand_dims(image2_raw_alpha, -1) / 255
-        if combined_image is not None:
-            np.multiply(combined_image, 1 - image2_alpha, out=combined_image)
-        else:
-            combined_image = np.multiply(visible_images[0], 1 - image2_alpha)
-        np.add(combined_image, image2[:, :, :3] * image2_alpha, out=combined_image)
+        source_image = visible_images[0] if combined_image is None else combined_image
+        combined_image = combine_two_images_with_alpha(
+            source_image,
+            image2,
+            out=combined_image,
+            fixed_alpha_enabled=fixed_alpha_enabled,
+            reuse_image_buffer=reuse_image_buffer
+        )
     return combined_image

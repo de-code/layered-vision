@@ -484,6 +484,12 @@ class LayeredVisionApp:
     def __exit__(self, *args, **kwargs):
         self.application_stopped_event.set()
         self.exit_stack.__exit__(*args, **kwargs)
+        self.close()
+
+    def close(self):
+        for layer in self.layer_by_id.values():
+            layer.close()
+        self.layer_by_id = {}
 
     def get_config_modified_timestamp(self):
         if os.path.isfile(self.config_path):
@@ -529,12 +535,12 @@ class LayeredVisionApp:
             else:
                 if had_layers:
                     LOGGER.info('adding layer: id=%r', layer_id)
-                runtime_layer = self.exit_stack.enter_context(create_runtime_layer(
+                runtime_layer = create_runtime_layer(
                     layer_index=layer_index,
                     layer_config=layer_config,
                     layer_id=layer_id,
                     context=self.context
-                ))
+                )
                 assert runtime_layer
                 self.layer_by_id[layer_id] = runtime_layer
             runtime_layers.append(runtime_layer)

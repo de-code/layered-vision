@@ -4,12 +4,20 @@ import re
 from contextlib import contextmanager
 from itertools import cycle
 from importlib import import_module
-from typing import Callable, ContextManager, Dict, Iterable, Iterator, Tuple
+from typing import Callable, ContextManager, Dict, Iterable, Iterator, Optional, Tuple
 
 import cv2
+import numpy as np
 
 from ..utils.path import parse_type_path
-from ..utils.image import resize_image_to, ImageSize, ImageArray, bgr_to_rgb
+from ..utils.image import (
+    resize_image_to,
+    ImageSize,
+    ImageArray,
+    bgr_to_rgb,
+    apply_alpha,
+    get_image_with_alpha
+)
 from ..utils.io import get_file, strip_url_suffix
 from ..utils.opencv import (
     get_video_image_source,
@@ -37,6 +45,7 @@ def get_simple_image_source(
     path: str,
     image_size: ImageSize = None,
     repeat: bool = None,
+    alpha: Optional[float] = None,
     **_
 ) -> Iterator[T_ImageSource]:
     local_image_path = get_file(path)
@@ -58,6 +67,12 @@ def get_simple_image_source(
         rgb_image_array.shape, rgb_image_array.dtype,
         image_array.shape, image_array.dtype
     )
+    if alpha is not None and alpha < 1:
+        LOGGER.info('setting alpha of image to: %.2f', alpha)
+        image_array = get_image_with_alpha(
+            apply_alpha(image_array),
+            np.full_like(image_array[:, :, 0], int(alpha * 255))
+        )
     image_array_iterable: T_ImageSource = [image_array]
     if repeat:
         image_array_iterable = cycle(image_array_iterable)

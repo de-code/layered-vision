@@ -26,6 +26,23 @@ layers:
         resize_like_id: in
         no_source: true
         enabled: false
+      - id: bg_fill_top
+        filter: fill
+        # poly points are relative to the image size
+        poly_points: [
+          [0.0, 0.0], [1.0, 0.0],  # top left, top right
+          [1.0, 0.1], [0.0, 0.1]   # bottom right, bottom left
+        ]
+        color: 'black'
+        enabled: false
+      - id: bg_fill_bottom
+        filter: fill
+        poly_points: [
+          [0.0, 0.9], [1.0, 0.9],  # top left, top right
+          [1.0, 1.0], [0.0, 1.0]   # bottom right, bottom left
+        ]
+        color: 'black'
+        enabled: false
     - layers:
       - id: bg2
         enabled: false

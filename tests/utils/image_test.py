@@ -5,6 +5,7 @@ from layered_vision.utils.image import (
     has_alpha,
     has_transparent_alpha,
     get_image_with_alpha,
+    safe_multiply,
     combine_images
 )
 
@@ -40,6 +41,22 @@ class TestHasTransparentAlpha:
 
     def test_should_return_true_for_image_with_alpha_less_than_one(self):
         assert has_transparent_alpha(add_alpha_channel(IMAGE_DATA_1, 0.5))
+
+
+class TestSafeMultiply:
+    def test_should_multiply_float32_with_float32_array(self):
+        image1 = np.array([1, 2, 3], dtype=np.float32)
+        image2 = np.array([0.5, 0.5, 0.5], dtype=np.float32)
+        assert safe_multiply(
+            image1, image2, out=image1
+        ).tolist() == [0.5, 1.0, 1.5]
+
+    def test_should_multiply_int_with_float32_array(self):
+        image1 = np.array([1, 2, 3], dtype=np.int)
+        image2 = np.array([0.5, 0.5, 0.5], dtype=np.float32)
+        assert safe_multiply(
+            image1, image2, out=image1
+        ).tolist() == [0.5, 1.0, 1.5]
 
 
 class TestCombineImages:
@@ -89,3 +106,12 @@ class TestCombineImages:
             (IMAGE_DATA_1 * 0.5 + IMAGE_DATA_2 * 0.5) * 0.5
             + IMAGE_DATA_3 * 0.5
         ), rtol=0.1)
+
+    def test_should_not_fail_using_fixed_alpha_enabled_and_float32_dtype(self):
+        image_data_3_with_multiple_alpha = add_alpha_channel(IMAGE_DATA_3, 0.5)
+        image_data_3_with_multiple_alpha[0, 0, 3] = 123
+        combine_images([
+            IMAGE_DATA_1.astype(np.uint8),
+            add_alpha_channel(IMAGE_DATA_2, 0.5).astype(np.uint8),
+            image_data_3_with_multiple_alpha.astype(np.float32)
+        ], fixed_alpha_enabled=True)
