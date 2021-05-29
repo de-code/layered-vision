@@ -8,8 +8,7 @@ from typing import (
     Callable, ContextManager, Deque, Iterable, Iterator,
     Generic,
     Optional,
-    TypeVar,
-    # T
+    TypeVar
 )
 
 import cv2
