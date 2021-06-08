@@ -1,6 +1,6 @@
 mss==6.1.0
 numpy==1.19.5
-opencv-python==4.5.2.52
+opencv-python==4.5.2.54
 pafy==0.5.5
 pyfakewebcam==0.1.0
 PyYAML==5.4.1
