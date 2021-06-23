@@ -1,5 +1,5 @@
 mss==6.1.0
-numpy==1.19.5
+numpy==1.21.0
 opencv-python==4.5.2.54
 pafy==0.5.5
 pyfakewebcam==0.1.0
