@@ -28,10 +28,13 @@ class ServerThread(threading.Thread):
         LOGGER.info('starting server, host=%r, port=%d', self.server.host, self.server.port)
         self.server.serve_forever()
 
-    def shutdown(self):
+    def _shutdown(self):
         LOGGER.info('stopping webserver')
         self.server.shutdown()
         LOGGER.info('stopped webserver')
+
+    def shutdown(self):
+        threading.Thread(target=self._shutdown).start()
 
 
 class LastImageFrameWrapper:
@@ -53,7 +56,7 @@ class LastImageFrameWrapper:
             if self.stopped_event.is_set():
                 LOGGER.info('stopped event set, raising StopIteration')
                 raise StopIteration()
-            if not self.has_frame_event.wait(1000):
+            if not self.has_frame_event.wait(1.0):
                 continue
             self.has_frame_event.clear()
             frame = self.frame
