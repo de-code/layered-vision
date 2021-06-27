@@ -139,9 +139,26 @@ The following outputs are currently supported:
 | image_writer | Write to a static image (e.g. `.png`) |
 | v4l2 | Linux Virtual Webcam (`/dev/videoN`) |
 | window | Display a window |
+| web | Provide output as JPEG stream |
 
 As is the case with the `input_path`, in most cases the *type name* is inferred from the `output_path`.
 You can also specify the type explicitly via the `type` property or by prefixing the path, e.g.: `v4l2:/dev/video2`.
+
+#### Web Stream (Experimental)
+
+The output may also be provide as a JPEG stream. That way it can be viewed in a browser.
+
+The following configuration options are supported:
+
+| name | default value | description |
+| ---- | ------------- | ----------- |
+| `host` | `0.0.0.0`   | Host to listen to, `0.0.0.0` to listen on any host. This could also be set to say `127.0.0.1` to prevent the stream from being accessed from another machine.
+| `port` | `8280`      | The port to listen to.
+
+With the default configuration, opening `http://localhost:8280` will provide a link to the stream.
+The stream will contineously provide JPEG frames to the browser (as a single request).
+
+Currently only one stream consumer is supported.
 
 ### Filter Layer
 

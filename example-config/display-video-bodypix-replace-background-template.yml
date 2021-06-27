@@ -111,3 +111,8 @@ layers:
   - id: out
     output_path: window
     window_title: "Video Background Template Example"
+  - id: web
+    output_path: 'web:'
+    host: 0.0.0.0
+    port: 8280
+    enabled: false
