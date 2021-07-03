@@ -36,7 +36,7 @@ class BodyPixFilter(AbstractLayerFilter):
 
     def parse_mp_selfie_segmentation_config(self, layer_config: LayerConfig) -> Config:
         config = BodyPixFilter.Config(
-            threshold=layer_config.get_float('threshold', 0.50),
+            threshold=layer_config.get_float('threshold', 0.1),
             model_selection=layer_config.get_int('model_selection', 1),
             cache_model_result_secs=(
                 layer_config.get_float('cache_model_result_secs', 0.0)
