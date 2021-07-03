@@ -31,6 +31,7 @@ when using this project as a library:
 | bodypix    | For [bodypix](https://github.com/de-code/python-tf-bodypix) filter
 | webcam     | Virtual Webcam support via [pyfakewebcam](https://pypi.org/project/pyfakewebcam/)
 | youtube    | YouTube support via [pafy](https://pypi.org/project/pafy/) and [youtube_dl](https://pypi.org/project/youtube_dl/)
+| mediapipe  | Selfie Segmentation using [MediaPipe](https://google.github.io/mediapipe/solutions/selfie_segmentation.html).
 | all        | All of the libraries
 
 ## Virtual Webcam For Linux
@@ -176,13 +177,34 @@ The following filters are currently supported:
 | `erode` | Erodes the image or channel. That could be useful to remove outliers from an alpha mask. |
 | `bilateral` | Applies a [bilateral filter](https://en.wikipedia.org/wiki/Bilateral_filter), using `d`, `sigma_color` and `sigma_space` parameters. |
 | `motion_blur` | Adds a motion blur to the image or channel. That could be used to make an alpha mask move more slowly |
+| `mp_selfie_segmentation` | Uses the [MediaPipe's Selfie Segmentation](https://google.github.io/mediapipe/solutions/selfie_segmentation.html) to mask a person (similar to bodypix). |
 | `pixelate` | Pixelates the input. |
 | `fill` | Fills the input or a selected channel with a color / value. e.g. with `color` set to `blue` |
 | `invert` | Inverts the input. e.g. `black` to `white` |
 | `multiply` | Multiplies the input with a constant value. e.g. to adjust the `alpha` channel |
 | `warp_perspective` | Warps the perspective of the input image given a list of `target_points`. e.g. to display it in a corner of the output image |
 
-Every *filter* may have additional properties. Please refer to the [examples](https://github.com/de-code/layered-vision/tree/develop/example-config) (or come back in the future) for more detailed information. In particular [display-video-bodypix-replace-background-template.yml](https://github.com/de-code/layered-vision/blob/develop/example-config/display-video-bodypix-replace-background-template.yml) provides examples of most filters (often disabled by default).
+Every *filter* may have additional properties. Please refer to the [examples](https://github.com/de-code/layered-vision/tree/develop/example-config) (or come back in the future) for more detailed information. In particular [display-video-segmentation-replace-background-template.yml](https://github.com/de-code/layered-vision/blob/develop/example-config/display-video-segmentation-replace-background-template.yml) provides examples of most filters (often disabled by default).
+
+#### Filter: mp_selfie_segmentation
+
+[MediaPipe's Selfie Segmentation](https://google.github.io/mediapipe/solutions/selfie_segmentation.html) allows background segmentation (similar to bodypix). As it is more optimized, it will usually be faster than using bodypix.
+
+The following parameters are supported:
+
+| name | default value | description |
+| ---- | ------------- | ----------- |
+| `model_selection` | `1`   | The model to use, `0` or `1` (please refer [MediaPipe's Selfie Segmentation documentation](https://google.github.io/mediapipe/solutions/selfie_segmentation.html#model_selection) for further details).
+| `threshold` | `0.1`      | The threshold for the segmentation mask.
+| `cache_model_result_secs` | `0.0`      | The number of seconds to cache the mask for.
+
+```bash
+python -m layered_vision start \
+  --config-file \
+  "example-config/display-video-segmentation-replace-background-template.yml" \
+  --set "bodypix.enabled=false" \
+  --set "mp_selfie_segmentation.enabled=true"
+```
 
 ### Branches Layer
 

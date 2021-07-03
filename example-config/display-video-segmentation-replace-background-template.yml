@@ -55,6 +55,13 @@ layers:
         internal_resolution: 0.5
         threshold: 0.5
         cache_model_result_secs: 0
+        enabled: true
+      - id: mp_selfie_segmentation
+        filter: mp_selfie_segmentation
+        cache_model_result_secs: 0.0
+        threshold: 0.1
+        model_selection: 1
+        enabled: false
       - id: invert
         filter: invert
         channel: alpha
