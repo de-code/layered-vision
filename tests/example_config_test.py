@@ -87,3 +87,25 @@ class TestMain:
         main(['start', '--config-file=%s' % config_file])
         sink = get_image_output_sink_for_path_mock.last_sink
         assert len(sink.images) > 0
+
+    @pytest.mark.parametrize("example_config_filename,additional_args", [
+        (
+            'display-video-segmentation-replace-background-template.yml',
+            [
+                '--set=bodypix.enabled=false',
+                '--set=mp_selfie_segmentation.enabled=false'
+            ]
+        )
+    ])
+    def test_should_process_example_with_args(
+            self,
+            example_config_filename: str,
+            additional_args: List[str],
+            get_image_output_sink_for_path_mock: GetCapturingOutputSink):
+        config_file = Path(EXAMPLE_CONFIG_DIR) / example_config_filename
+        main(
+            ['start', '--config-file=%s' % config_file]
+            + additional_args
+        )
+        sink = get_image_output_sink_for_path_mock.last_sink
+        assert len(sink.images) > 0
