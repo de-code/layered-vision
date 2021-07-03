@@ -186,7 +186,7 @@ The following filters are currently supported:
 
 Every *filter* may have additional properties. Please refer to the [examples](https://github.com/de-code/layered-vision/tree/develop/example-config) (or come back in the future) for more detailed information. In particular [display-video-segmentation-replace-background-template.yml](https://github.com/de-code/layered-vision/blob/develop/example-config/display-video-segmentation-replace-background-template.yml) provides examples of most filters (often disabled by default).
 
-#### Filter: mp_selfie_segmentation
+#### Filter: mp_selfie_segmentation (Experimental)
 
 [MediaPipe's Selfie Segmentation](https://google.github.io/mediapipe/solutions/selfie_segmentation.html) allows background segmentation (similar to bodypix). As it is more optimized, it will usually be faster than using bodypix.
 
