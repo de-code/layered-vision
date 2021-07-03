@@ -1,4 +1,4 @@
-def get_requirement_groups(requirement):
+def get_requirement_groups(requirement):  # pylint: disable=too-many-return-statements
     requirement_lower = requirement.lower()
     if 'bodypix' in requirement_lower:
         return ['bodypix']
@@ -10,6 +10,8 @@ def get_requirement_groups(requirement):
         return ['youtube']
     if 'mss' in requirement_lower:
         return ['mss']
+    if 'mediapipe' in requirement_lower:
+        return ['mediapipe']
     return [None]
 
 
