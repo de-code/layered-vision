@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-import numpy.ma as ma
+from numpy import ma
 
 from layered_vision.config import LayerConfig
 from layered_vision.filters.api import FilterContext
