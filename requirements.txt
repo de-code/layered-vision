@@ -5,6 +5,6 @@ numpy>=1.19.3,<1.22.0
 opencv-python==4.5.3.56
 pafy==0.5.5
 pyfakewebcam==0.1.0
-PyYAML==5.4.1
+PyYAML==6.0
 tf-bodypix[tf,tfjs]==0.3.7
 youtube_dl==2021.6.6
