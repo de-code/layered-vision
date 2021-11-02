@@ -6,7 +6,7 @@ from itertools import cycle
 from importlib import import_module
 from typing import Callable, ContextManager, Dict, Iterable, Iterator, Optional, Tuple
 
-import cv2
+from cv2 import cv2
 import numpy as np
 
 from ..utils.path import parse_type_path
