@@ -286,6 +286,7 @@ class RuntimeLayer:
         except (StopIteration, LayerException):
             raise
         except Exception as exc:
+            LOGGER.error('failed to process layer %r due to %r', self.layer_id, exc, exc_info=1)
             raise LayerException('failed to process layer %r due to %r' % (
                 self.layer_id, exc
             )) from exc
