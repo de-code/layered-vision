@@ -1,6 +1,6 @@
 import logging
 from collections import Counter, namedtuple
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union, cast
 
 from cv2 import cv2
 import numpy as np
@@ -51,7 +51,7 @@ def box_blur_image(image: ImageArray, blur_size: int) -> ImageArray:
     if not blur_size:
         return image
     if len(image.shape) == 4:
-        image = image[0]
+        image = cast(ImageArray, image[0])
     result = cv2.blur(np.asarray(image), (blur_size, blur_size))
     if len(result.shape) == 2:
         result = np.expand_dims(result, axis=-1)
@@ -74,7 +74,7 @@ def bgr_to_rgb(image: ImageArray) -> ImageArray:
     color_channels = image.shape[-1]
     if color_channels == 3:
         # see https://www.scivision.dev/numpy-image-bgr-to-rgb/
-        return image[..., ::-1]
+        return cast(ImageArray, image[..., ::-1])
     # bgra to rgba
     return cv2.cvtColor(image, cv2.COLOR_BGRA2RGBA)
 
