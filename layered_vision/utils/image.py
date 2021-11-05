@@ -1,6 +1,6 @@
 import logging
 from collections import Counter, namedtuple
-from typing import Any, List, Optional, Tuple, Union
+from typing import List, Optional, cast
 
 from cv2 import cv2
 import numpy as np
@@ -12,18 +12,7 @@ LOGGER = logging.getLogger(__name__)
 ImageSize = namedtuple('ImageSize', ('height', 'width'))
 
 
-class SimpleImageArray:
-    shape: Tuple[int, ...]
-    dtype: Any
-
-    def __getitem__(self, *args) -> Union['SimpleImageArray', int, float]:
-        pass
-
-    def astype(self, dtype: Any) -> 'SimpleImageArray':
-        pass
-
-
-ImageArray = Union[np.ndarray, SimpleImageArray]
+ImageArray = np.ndarray
 
 
 def get_image_size(image: ImageArray):
@@ -51,7 +40,7 @@ def box_blur_image(image: ImageArray, blur_size: int) -> ImageArray:
     if not blur_size:
         return image
     if len(image.shape) == 4:
-        image = image[0]
+        image = cast(ImageArray, image[0])
     result = cv2.blur(np.asarray(image), (blur_size, blur_size))
     if len(result.shape) == 2:
         result = np.expand_dims(result, axis=-1)
@@ -74,7 +63,7 @@ def bgr_to_rgb(image: ImageArray) -> ImageArray:
     color_channels = image.shape[-1]
     if color_channels == 3:
         # see https://www.scivision.dev/numpy-image-bgr-to-rgb/
-        return image[..., ::-1]
+        return cast(ImageArray, image[..., ::-1])
     # bgra to rgba
     return cv2.cvtColor(image, cv2.COLOR_BGRA2RGBA)
 
@@ -107,7 +96,7 @@ def has_alpha(image: ImageArray) -> bool:
 def has_transparent_alpha(image: ImageArray) -> bool:
     if not has_alpha(image):
         return False
-    return np.any(image[:, :, 3] != 255)
+    return bool(np.any(image[:, :, 3] != 255))
 
 
 def apply_alpha(image: ImageArray) -> ImageArray:
@@ -199,7 +188,7 @@ def combine_images(
     images: List[ImageArray],
     fixed_alpha_enabled: bool = True,
     reuse_image_buffer: bool = True
-) -> ImageArray:
+) -> Optional[ImageArray]:
     if not images:
         return None
     LOGGER.debug('images shapes: %s', [image.shape for image in images])

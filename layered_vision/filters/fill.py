@@ -29,7 +29,7 @@ class FillFilter(AbstractOptionalChannelFilter):
         value = layer_config.get_int('value')
         poly_points_list = layer_config.get_list('poly_points')
         poly_points = (
-            np.float32(poly_points_list)
+            np.asarray(poly_points_list, dtype=np.float32)
             if poly_points_list
             else None
         )
@@ -55,9 +55,9 @@ class FillFilter(AbstractOptionalChannelFilter):
         if config.poly_points is not None:
             image_size = get_image_size(image_array)
             width_height_tuple = (image_size.width, image_size.height,)
-            poly_points = (config.poly_points * width_height_tuple).astype(np.int)
+            poly_points = (config.poly_points * width_height_tuple).astype(np.int32)
             return cv2.fillPoly(
-                np.array(image_array, dtype=np.float),
+                np.array(image_array, dtype=np.float_),
                 pts=[poly_points],
                 color=config.value if color_channels == 1 else config.color.tolist()
             )

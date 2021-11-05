@@ -43,7 +43,7 @@ class TestFillFilter:
         LOGGER.debug('result_image:\n%s', result_image)
         mask = np.zeros(source_image.shape)
         mask[1:5, 1:7] = 1
-        masked_result_image = ma.masked_array(result_image, mask)
+        masked_result_image: np.ndarray = ma.masked_array(result_image, mask)
         poly_area = result_image[1:5, 1:7]
         LOGGER.debug('poly_area:\n%s', poly_area)
         assert result_image.shape == source_image.shape

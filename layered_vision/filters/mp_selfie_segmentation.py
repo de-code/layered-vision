@@ -95,6 +95,7 @@ class BodyPixFilter(AbstractLayerFilter):
         )
         self._mask_cache = segmentation_result.segmentation_mask
         self._mask_cache_time = current_time
+        assert self._mask_cache is not None
         return self._mask_cache
 
     def do_filter(self, image_array: ImageArray) -> ImageArray:
