@@ -1,6 +1,6 @@
 import logging
 from collections import Counter, namedtuple
-from typing import Any, List, Optional, Tuple, Union, cast
+from typing import List, Optional, cast
 
 from cv2 import cv2
 import numpy as np
@@ -12,18 +12,7 @@ LOGGER = logging.getLogger(__name__)
 ImageSize = namedtuple('ImageSize', ('height', 'width'))
 
 
-class SimpleImageArray:
-    shape: Tuple[int, ...]
-    dtype: Any
-
-    def __getitem__(self, *args) -> Union['SimpleImageArray', int, float]:
-        pass
-
-    def astype(self, dtype: Any) -> 'SimpleImageArray':
-        pass
-
-
-ImageArray = Union[np.ndarray, SimpleImageArray]
+ImageArray = np.ndarray
 
 
 def get_image_size(image: ImageArray):
