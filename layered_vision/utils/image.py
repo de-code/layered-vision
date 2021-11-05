@@ -107,7 +107,7 @@ def has_alpha(image: ImageArray) -> bool:
 def has_transparent_alpha(image: ImageArray) -> bool:
     if not has_alpha(image):
         return False
-    return np.any(image[:, :, 3] != 255)
+    return bool(np.any(image[:, :, 3] != 255))
 
 
 def apply_alpha(image: ImageArray) -> ImageArray:
