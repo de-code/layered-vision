@@ -144,7 +144,7 @@ class ReadLatestThreadedReader:
     def stop(self):
         self.stopped_event.set()
 
-    def peek(self) -> ImageArray:
+    def peek(self) -> Optional[ImageArray]:
         while True:
             data = self.data_deque.peek()
             if data is not None:

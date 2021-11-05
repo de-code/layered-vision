@@ -188,7 +188,7 @@ def combine_images(
     images: List[ImageArray],
     fixed_alpha_enabled: bool = True,
     reuse_image_buffer: bool = True
-) -> ImageArray:
+) -> Optional[ImageArray]:
     if not images:
         return None
     LOGGER.debug('images shapes: %s', [image.shape for image in images])
