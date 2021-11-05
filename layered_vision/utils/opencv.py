@@ -103,16 +103,16 @@ class WaitingDeque(Generic[T]):
         return self.deque.pop()
 
 
-class ReadLatestThreadedReader:
+class ReadLatestThreadedReader(Generic[T]):
     def __init__(
         self,
-        iterable: Iterable[ImageArray],
+        iterable: Iterable[T],
         stopped_event: Optional[Event] = None,
         wait_for_data: bool = False
     ):
         self.iterable = iterable
         self.thread = Thread(target=self.read_all_loop, daemon=False)
-        self.data_deque = WaitingDeque[ImageArray](max_length=1)
+        self.data_deque = WaitingDeque[T](max_length=1)
         if stopped_event is None:
             stopped_event = Event()
         self.stopped_event = stopped_event
@@ -144,7 +144,7 @@ class ReadLatestThreadedReader:
     def stop(self):
         self.stopped_event.set()
 
-    def peek(self) -> Optional[ImageArray]:
+    def peek(self) -> Optional[T]:
         while True:
             data = self.data_deque.peek()
             if data is not None:
@@ -154,7 +154,7 @@ class ReadLatestThreadedReader:
             # wait for first frame (subsequent frames will always be available)
             sleep(0.01)
 
-    def pop(self, timeout: float = None) -> ImageArray:
+    def pop(self, timeout: float = None) -> T:
         LOGGER.debug('waiting for data..')
         return self.data_deque.pop(timeout=timeout)
 
@@ -172,7 +172,7 @@ class ReadLatestThreadedReader:
 
 
 def iter_read_threaded(iterable: Iterable[T], **kwargs) -> Iterable[T]:
-    with ReadLatestThreadedReader(iterable, **kwargs) as reader:
+    with ReadLatestThreadedReader[T](iterable, **kwargs) as reader:
         yield from reader
 
 
