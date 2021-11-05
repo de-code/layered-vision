@@ -30,11 +30,13 @@ class WarpPerspectiveFilter(AbstractOptionalChannelFilter):
 
     def parse_warp_perspective_config(self, layer_config: LayerConfig) -> Config:
         config = WarpPerspectiveFilter.Config(
-            target_points=np.float32(
-                layer_config.get_list('target_points', DEFAULT_POINTS)
+            target_points=np.asarray(
+                layer_config.get_list('target_points', DEFAULT_POINTS),
+                dtype=np.float32
             ),
-            source_points=np.float32(
-                layer_config.get_list('source_points', DEFAULT_POINTS)
+            source_points=np.array(
+                layer_config.get_list('source_points', DEFAULT_POINTS),
+                dtype=np.float32
             ),
             add_alpha_channel=self.layer_config.get_bool('add_alpha_channel', True)
         )
