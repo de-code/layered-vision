@@ -71,7 +71,7 @@ class WarpPerspectiveFilter(AbstractOptionalChannelFilter):
                 np.full_like(image_array[:, :, 0], 255),
             ))
         if np.issubdtype(image_array.dtype, np.integer):
-            image_array = image_array.astype(np.float)
+            image_array = image_array.astype(np.float_)
         return cv2.warpPerspective(
             image_array,
             transformation_matrix,
