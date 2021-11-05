@@ -29,7 +29,7 @@ class FillFilter(AbstractOptionalChannelFilter):
         value = layer_config.get_int('value')
         poly_points_list = layer_config.get_list('poly_points')
         poly_points = (
-            np.float32(poly_points_list)
+            np.asarray(poly_points_list, dtype=np.float32)
             if poly_points_list
             else None
         )
