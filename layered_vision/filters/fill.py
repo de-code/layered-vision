@@ -57,7 +57,7 @@ class FillFilter(AbstractOptionalChannelFilter):
             width_height_tuple = (image_size.width, image_size.height,)
             poly_points = (config.poly_points * width_height_tuple).astype(np.int)
             return cv2.fillPoly(
-                np.array(image_array, dtype=np.float),
+                np.array(image_array, dtype=np.float_),
                 pts=[poly_points],
                 color=config.value if color_channels == 1 else config.color.tolist()
             )
