@@ -11,4 +11,5 @@ disable=
     too-many-arguments,
     too-many-instance-attributes,
     duplicate-code,
-    invalid-name
+    invalid-name,
+    consider-using-f-string
