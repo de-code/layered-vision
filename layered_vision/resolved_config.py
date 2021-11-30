@@ -24,7 +24,7 @@ class ResolvedLayerConfig(LayerConfig):
     def __init__(self, props: dict, default_input_layer: 'ResolvedLayerConfig' = None):
         super().__init__(props)
         self.layer_id = props['id']
-        self.input_layers: List[ResolvedLayerConfig] = []
+        self.input_layers: List['ResolvedLayerConfig'] = []
         if default_input_layer and not self.is_no_source:
             self.input_layers.append(default_input_layer)
         self.resolved_layer_type = get_resolved_layer_type(self)
