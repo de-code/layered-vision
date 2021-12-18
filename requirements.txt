@@ -8,4 +8,4 @@ pyfakewebcam==0.1.0
 PyYAML==6.0
 tensorflow==2.7.0
 tf-bodypix[tfjs]==0.3.8
-youtube_dl==2021.6.6
+youtube_dl==2021.12.17
