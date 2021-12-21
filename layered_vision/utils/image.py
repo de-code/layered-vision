@@ -188,9 +188,9 @@ def combine_images(
     images: List[ImageArray],
     fixed_alpha_enabled: bool = True,
     reuse_image_buffer: bool = True
-) -> Optional[ImageArray]:
+) -> ImageArray:
     if not images:
-        return None
+        raise AssertionError('at least one image required')
     LOGGER.debug('images shapes: %s', [image.shape for image in images])
     visible_images: List[ImageArray] = []
     for image in images:
@@ -216,4 +216,11 @@ def combine_images(
             fixed_alpha_enabled=fixed_alpha_enabled,
             reuse_image_buffer=reuse_image_buffer
         )
+    assert combined_image is not None
     return combined_image
+
+
+def combine_images_or_none(images: List[ImageArray], *args, **kwargs) -> Optional[ImageArray]:
+    if not images:
+        return None
+    return combine_images(images, *args, **kwargs)
