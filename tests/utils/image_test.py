@@ -1,3 +1,5 @@
+import pytest
+
 import numpy as np
 
 from layered_vision.utils.image import (
@@ -6,7 +8,8 @@ from layered_vision.utils.image import (
     has_transparent_alpha,
     get_image_with_alpha,
     safe_multiply,
-    combine_images
+    combine_images,
+    combine_images_or_none
 )
 
 
@@ -60,8 +63,9 @@ class TestSafeMultiply:
 
 
 class TestCombineImages:
-    def test_should_return_none_if_received_empty_list(self):
-        assert combine_images([]) is None
+    def test_should_return_raise_exception_for_empty_list(self):
+        with pytest.raises(AssertionError):
+            combine_images([])
 
     def test_should_return_passed_in_image_if_received_single_image(self):
         np.testing.assert_allclose(combine_images([IMAGE_DATA_1]), IMAGE_DATA_1)
@@ -115,3 +119,11 @@ class TestCombineImages:
             add_alpha_channel(IMAGE_DATA_2, 0.5).astype(np.uint8),
             image_data_3_with_multiple_alpha.astype(np.float32)
         ], fixed_alpha_enabled=True)
+
+
+class TestCombineImagesOrNone:
+    def test_should_return_none_if_received_empty_list(self):
+        assert combine_images_or_none([]) is None
+
+    def test_should_return_passed_in_image_if_received_single_image(self):
+        np.testing.assert_allclose(combine_images_or_none([IMAGE_DATA_1]), IMAGE_DATA_1)
