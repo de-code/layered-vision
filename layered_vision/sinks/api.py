@@ -5,7 +5,7 @@ from functools import partial
 from importlib import import_module
 from typing import Callable, ContextManager, Dict, Iterator, Tuple
 
-from cv2 import cv2
+import cv2
 
 from ..utils.path import parse_type_path
 from ..utils.image import ImageArray, rgb_to_bgr

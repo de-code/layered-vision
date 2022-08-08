@@ -1,6 +1,6 @@
 import logging
 
-from cv2 import cv2
+import cv2
 
 from layered_vision.utils.image import ImageArray
 from layered_vision.filters.api import AbstractOptionalChannelFilter

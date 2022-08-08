@@ -1,7 +1,9 @@
-[MASTER]
+[MAIN]
 extension-pkg-whitelist=
     cv2
 
+[TYPECHECK]
+generated-members=cv2
 
 [MESSAGES CONTROL]
 disable=

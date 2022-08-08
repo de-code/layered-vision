@@ -2,7 +2,7 @@ import logging
 from typing import NamedTuple, Optional
 
 import numpy as np
-from cv2 import cv2
+import cv2
 
 from layered_vision.utils.image import ImageArray, get_image_size
 from layered_vision.filters.api import AbstractOptionalChannelFilter
