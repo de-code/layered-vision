@@ -124,7 +124,8 @@ class OutputSinkWrapper:
     @property
     def output_sink(self):
         if self._output_sink is None:
-            self.__enter__()
+            # no context manager used, use context implicitly
+            self.__enter__()  # pylint: disable=unnecessary-dunder-call
         assert self._output_sink is not None
         return self._output_sink
 
@@ -152,7 +153,8 @@ class ImageSourceWrapper:
     @property
     def image_iterator(self):
         if self._image_iterator is None:
-            self.__enter__()
+            # no context manager used, use context implicitly
+            self.__enter__()  # pylint: disable=unnecessary-dunder-call
         assert self._image_iterator is not None
         return self._image_iterator
 
