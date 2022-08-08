@@ -61,7 +61,8 @@ class BodyPixFilter(AbstractLayerFilter):
         selfie_segmentation = mp.solutions.selfie_segmentation.SelfieSegmentation(
             model_selection=self.mp_selfie_segmentation_config.model_selection
         )
-        selfie_segmentation.__enter__()
+        # we need to start the context manager but do not want to exit it yet
+        selfie_segmentation.__enter__()  # pylint: disable=unnecessary-dunder-call
         return selfie_segmentation
 
     @property
