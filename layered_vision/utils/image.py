@@ -2,7 +2,7 @@ import logging
 from collections import Counter, namedtuple
 from typing import List, Optional, cast
 
-from cv2 import cv2
+import cv2
 import numpy as np
 
 

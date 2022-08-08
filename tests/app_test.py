@@ -4,7 +4,7 @@ from typing import Tuple, Union
 
 import pytest
 import yaml
-from cv2 import cv2
+import cv2
 import numpy as np
 
 from layered_vision.utils.image import ImageSize, ImageArray

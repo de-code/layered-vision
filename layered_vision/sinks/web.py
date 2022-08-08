@@ -1,7 +1,8 @@
 import logging
 import threading
 from typing import Iterable, Optional
-from cv2 import cv2
+
+import cv2
 
 import werkzeug.serving
 from flask import Flask, Blueprint

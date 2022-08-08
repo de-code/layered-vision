@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Union
 
-from cv2 import cv2
+import cv2
 
 import pytest
 
