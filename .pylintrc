@@ -1,4 +1,4 @@
-[MASTER]
+[MAIN]
 extension-pkg-whitelist=
     cv2
 
