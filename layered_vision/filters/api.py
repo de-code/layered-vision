@@ -5,7 +5,7 @@ from typing import NamedTuple, Optional, Tuple
 
 import numpy as np
 
-from cv2 import cv2
+import cv2
 
 from ..utils.timer import LoggingTimer
 from ..utils.image import (

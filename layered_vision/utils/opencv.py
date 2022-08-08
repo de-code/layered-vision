@@ -11,7 +11,7 @@ from typing import (
     TypeVar
 )
 
-from cv2 import cv2
+import cv2
 import numpy as np
 
 from .io import get_file
