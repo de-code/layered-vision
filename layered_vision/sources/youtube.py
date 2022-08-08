@@ -1,7 +1,12 @@
 import logging
+import time
 from typing import ContextManager, Iterable, List
 
+import youtube_dl
+
 import pafy
+import pafy.g
+from pafy.backend_youtube_dl import YtdlPafy
 
 from layered_vision.utils.image import ImageArray, ImageSize
 from layered_vision.utils.opencv import get_video_image_source
@@ -10,8 +15,42 @@ from layered_vision.utils.opencv import get_video_image_source
 LOGGER = logging.getLogger(__name__)
 
 
+class PatchedYtdlPafy(YtdlPafy):
+    # patch _fetch_basic function due to missing dislike_count
+    def _fetch_basic(self):
+        """ Fetch basic data and streams. """
+        if self._have_basic:
+            return
+
+        with youtube_dl.YoutubeDL(self._ydl_opts) as ydl:
+            try:
+                self._ydl_info = ydl.extract_info(self.videoid, download=False)
+            # Turn into an IOError since that is what pafy previously raised
+            except youtube_dl.utils.DownloadError as exc:
+                raise IOError(str(exc).replace('YouTube said', 'Youtube says')) from exc
+
+        if self.callback:
+            self.callback("Fetched video info")
+
+        self._title = self._ydl_info['title']
+        self._author = self._ydl_info['uploader']
+        self._rating = self._ydl_info['average_rating']
+        self._length = self._ydl_info['duration']
+        self._viewcount = self._ydl_info['view_count']
+        self._likes = self._ydl_info['like_count']
+        self._dislikes = self._ydl_info.get('dislike_count', 0)
+        self._username = self._ydl_info['uploader_id']
+        self._category = self._ydl_info['categories'][0] if self._ydl_info['categories'] else ''
+        self._bestthumb = self._ydl_info['thumbnails'][0]['url']
+        self._bigthumb = pafy.g.urls['bigthumb'] % self.videoid
+        self._bigthumbhd = pafy.g.urls['bigthumbhd'] % self.videoid
+        self.expiry = time.time() + pafy.g.lifespan
+
+        self._have_basic = True
+
+
 def get_pafy_video(url: str) -> pafy.backend_shared.BasePafy:
-    return pafy.new(url)
+    return PatchedYtdlPafy(url)
 
 
 def get_best_matching_video_stream(
