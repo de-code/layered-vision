@@ -94,9 +94,9 @@ class TestGetMergedSetValues:
 
 
 class TestMain:
-    def test_should_copy_source_to_target_image(self, temp_dir: Path):
-        output_path = temp_dir / 'output.png'
-        config_file = temp_dir / 'config.yml'
+    def test_should_copy_source_to_target_image(self, tmp_path: Path):
+        output_path = tmp_path / 'output.png'
+        config_file = tmp_path / 'config.yml'
         config_file.write_text(
             '''
             layers:
@@ -115,9 +115,9 @@ class TestMain:
         assert width > 0
         assert height > 0
 
-    def test_should_copy_and_resize_source_to_target_image(self, temp_dir: Path):
-        output_path = temp_dir / 'output.png'
-        config_file = temp_dir / 'config.yml'
+    def test_should_copy_and_resize_source_to_target_image(self, tmp_path: Path):
+        output_path = tmp_path / 'output.png'
+        config_file = tmp_path / 'config.yml'
         config_file.write_text(
             '''
             layers:
@@ -137,10 +137,10 @@ class TestMain:
         height, width, *_ = image.shape
         assert (width, height) == (320, 200)
 
-    def test_should_copy_to_multiple_outputs(self, temp_dir: Path):
-        output_path_1 = temp_dir / 'output_1.png'
-        output_path_2 = temp_dir / 'output_2.png'
-        config_file = temp_dir / 'config.yml'
+    def test_should_copy_to_multiple_outputs(self, tmp_path: Path):
+        output_path_1 = tmp_path / 'output_1.png'
+        output_path_2 = tmp_path / 'output_2.png'
+        config_file = tmp_path / 'config.yml'
         config_file.write_text(
             '''
             layers:
@@ -164,9 +164,9 @@ class TestMain:
             height, width, *_ = image.shape
             assert (width, height) == (320, 200)
 
-    def test_should_be_able_to_replace_input_and_output_path(self, temp_dir: Path):
-        output_path = temp_dir / 'output.png'
-        config_file = temp_dir / 'config.yml'
+    def test_should_be_able_to_replace_input_and_output_path(self, tmp_path: Path):
+        output_path = tmp_path / 'output.png'
+        config_file = tmp_path / 'config.yml'
         config_file.write_text(
             '''
             layers:
