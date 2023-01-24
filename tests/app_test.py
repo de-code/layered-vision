@@ -66,10 +66,10 @@ def _blue_image_file(tmp_path: Path) -> Path:
 
 
 class TestApp:
-    def test_should_configure_simple_input_output(self, temp_dir: Path):
-        input_path = temp_dir / 'input.png'
-        output_path = temp_dir / 'output.png'
-        config_file = temp_dir / 'config.yml'
+    def test_should_configure_simple_input_output(self, tmp_path: Path):
+        input_path = tmp_path / 'input.png'
+        output_path = tmp_path / 'output.png'
+        config_file = tmp_path / 'config.yml'
         config_file.write_text(
             '''
             layers:
@@ -90,11 +90,11 @@ class TestApp:
 
     @pytest.mark.parametrize("no_source", (False, True))
     def test_should_ignore_extra_input_depending_on_no_source(
-        self, temp_dir: Path, no_source: bool
+        self, tmp_path: Path, no_source: bool
     ):
-        input_path = temp_dir / 'input.png'
-        output_path = temp_dir / 'output.png'
-        config_file = temp_dir / 'config.yml'
+        input_path = tmp_path / 'input.png'
+        output_path = tmp_path / 'output.png'
+        config_file = tmp_path / 'config.yml'
         config_file.write_text(
             '''
             layers:
@@ -121,11 +121,11 @@ class TestApp:
             else:
                 assert app.output_runtime_layers[0].source_layers[0].source_layers
 
-    def test_should_reload_input_source_if_changed(self, temp_dir: Path):
-        input_path = temp_dir / 'input.png'
-        input_path_2 = temp_dir / 'input_2.png'
-        output_path = temp_dir / 'output.png'
-        config_file = temp_dir / 'config.yml'
+    def test_should_reload_input_source_if_changed(self, tmp_path: Path):
+        input_path = tmp_path / 'input.png'
+        input_path_2 = tmp_path / 'input_2.png'
+        output_path = tmp_path / 'output.png'
+        config_file = tmp_path / 'config.yml'
         config = {
             'layers': [{
                 'id': 'in',
@@ -149,11 +149,11 @@ class TestApp:
 
 class TestAppEndToEnd:
     def test_should_copy_image(
-        self, temp_dir: Path,
+        self, tmp_path: Path,
         red_image_file: Path
     ):
-        output_path = temp_dir / 'output.png'
-        config_file = temp_dir / 'config.yml'
+        output_path = tmp_path / 'output.png'
+        config_file = tmp_path / 'config.yml'
         config = {
             'layers': [{
                 'id': 'in',
@@ -170,12 +170,12 @@ class TestAppEndToEnd:
             np.testing.assert_array_equal(output_image, RED_IMAGE)
 
     def test_should_reload_config_image_input(
-        self, temp_dir: Path,
+        self, tmp_path: Path,
         red_image_file: Path,
         green_image_file: Path
     ):
-        output_path = temp_dir / 'output.png'
-        config_file = temp_dir / 'config.yml'
+        output_path = tmp_path / 'output.png'
+        config_file = tmp_path / 'config.yml'
         config = {
             'layers': [{
                 'id': 'in',
@@ -198,12 +198,12 @@ class TestAppEndToEnd:
             np.testing.assert_array_equal(output_image, GREEN_IMAGE)
 
     def test_should_reload_config_enabled_image_input(
-        self, temp_dir: Path,
+        self, tmp_path: Path,
         red_image_file: Path,
         green_image_file: Path
     ):
-        output_path = temp_dir / 'output.png'
-        config_file = temp_dir / 'config.yml'
+        output_path = tmp_path / 'output.png'
+        config_file = tmp_path / 'config.yml'
         config: dict = {
             'layers': [{
                 'id': 'in',
@@ -230,18 +230,18 @@ class TestAppEndToEnd:
             np.testing.assert_array_equal(output_image, GREEN_IMAGE)
 
     def test_should_fallback_to_error_image_for_input(
-        self, temp_dir: Path,
+        self, tmp_path: Path,
         red_image_file: Path
     ):
-        output_path = temp_dir / 'output.png'
-        config_file = temp_dir / 'config.yml'
+        output_path = tmp_path / 'output.png'
+        config_file = tmp_path / 'config.yml'
         config: dict = {
             'layers': [{
                 'id': 'on_error',
                 'input_path': str(red_image_file)
             }, {
                 'id': 'in',
-                'input_path': str(temp_dir / 'invalid')
+                'input_path': str(tmp_path / 'invalid')
             }, {
                 'id': 'out',
                 'output_path': str(output_path)
@@ -254,12 +254,12 @@ class TestAppEndToEnd:
             np.testing.assert_array_equal(output_image, RED_IMAGE)
 
     def test_should_fallback_to_error_image_for_filter(
-        self, temp_dir: Path,
+        self, tmp_path: Path,
         red_image_file: Path,
         green_image_file: Path
     ):
-        output_path = temp_dir / 'output.png'
-        config_file = temp_dir / 'config.yml'
+        output_path = tmp_path / 'output.png'
+        config_file = tmp_path / 'config.yml'
         config: dict = {
             'layers': [{
                 'id': 'on_error',
