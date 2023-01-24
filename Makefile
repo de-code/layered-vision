@@ -30,10 +30,11 @@ venv-create:
 
 
 dev-install:
-	$(PIP) install -r requirements.build.txt
+	$(PIP) install --requirement=requirements.build.txt
 	$(PIP) install \
-		-r requirements.dev.txt \
-		-r requirements.txt
+		--constraint=constraints.txt \
+		--requirement=requirements.dev.txt \
+		--requirement=requirements.txt
 
 
 dev-venv: venv-create dev-install
@@ -84,7 +85,7 @@ dev-get-version:
 
 dev-test-install-dist:
 	$(MAKE) VENV=$(VENV_TEMP) venv-create
-	$(VENV_TEMP)/bin/pip install -r requirements.build.txt
+	$(VENV_TEMP)/bin/pip install --requirement=requirements.build.txt
 	$(VENV_TEMP)/bin/pip install --force-reinstall ./dist/*.tar.gz
 	$(VENV_TEMP)/bin/pip install --force-reinstall ./dist/*.whl
 
