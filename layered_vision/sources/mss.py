@@ -1,7 +1,7 @@
 import logging
 from contextlib import contextmanager
 from threading import Event
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, Optional
 
 import mss
 from mss.base import MSSBase
@@ -18,7 +18,7 @@ LOGGER = logging.getLogger(__name__)
 def iter_screen_grab(
     sct: MSSBase,
     grab_params: dict,
-    stopped_event: Event = None
+    stopped_event: Optional[Event] = None
 ) -> Iterable[ImageArray]:
     if stopped_event is None:
         stopped_event = Event()
@@ -30,10 +30,10 @@ def iter_screen_grab(
 def get_mss_video_image_source(
     path: str,  # pylint: disable=unused-argument
     *args,
-    image_size: ImageSize = None,
-    stopped_event: Event = None,
-    init_params: dict = None,
-    grab_params: dict = None,
+    image_size: Optional[ImageSize] = None,
+    stopped_event: Optional[Event] = None,
+    init_params: Optional[dict] = None,
+    grab_params: Optional[dict] = None,
     **_
 ) -> Iterator[Iterable[ImageArray]]:
     LOGGER.info('constructing mss with %r', init_params or {})

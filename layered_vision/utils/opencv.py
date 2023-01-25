@@ -87,13 +87,13 @@ class WaitingDeque(Generic[T]):
         self.deque.append(data)
         self.changed_event.set()
 
-    def peek(self, default_value: T = None) -> Optional[T]:
+    def peek(self, default_value: Optional[T] = None) -> Optional[T]:
         try:
             return self.deque[-1]
         except IndexError:
             return default_value
 
-    def pop(self, timeout: float = None) -> T:
+    def pop(self, timeout: Optional[float] = None) -> T:
         self.changed_event.clear()
         try:
             return self.deque.pop()
@@ -154,7 +154,7 @@ class ReadLatestThreadedReader(Generic[T]):
             # wait for first frame (subsequent frames will always be available)
             sleep(0.01)
 
-    def pop(self, timeout: float = None) -> T:
+    def pop(self, timeout: Optional[float] = None) -> T:
         LOGGER.debug('waiting for data..')
         return self.data_deque.pop(timeout=timeout)
 
@@ -179,7 +179,7 @@ def iter_read_threaded(iterable: Iterable[T], **kwargs) -> Iterable[T]:
 def iter_read_raw_video_images(
     video_capture: cv2.VideoCapture,
     repeat: bool = False,
-    is_stopped: Callable[[], bool] = None
+    is_stopped: Optional[Callable[[], bool]] = None
 ) -> Iterable[ImageArray]:
     while is_stopped is None or not is_stopped():
         grabbed, image_array = video_capture.read()
@@ -197,7 +197,7 @@ def iter_read_raw_video_images(
 
 def iter_resize_video_images(
     video_images: Iterable[ImageArray],
-    image_size: ImageSize = None,
+    image_size: Optional[ImageSize] = None,
     interpolation: int = cv2.INTER_LINEAR
 ) -> Iterable[ImageArray]:
     is_first = True
@@ -226,7 +226,7 @@ def iter_convert_video_images_to_rgb(
 
 def iter_delay_video_images_to_fps(
     video_images: Iterable[ImageArray],
-    fps: float = None
+    fps: Optional[float] = None
 ) -> Iterable[np.ndarray]:
     if not fps or fps <= 0:
         yield from video_images
@@ -271,13 +271,13 @@ def iter_delay_video_images_to_fps(
 
 def iter_read_video_images(
     video_capture: cv2.VideoCapture,
-    image_size: ImageSize = None,
+    image_size: Optional[ImageSize] = None,
     interpolation: int = cv2.INTER_LINEAR,
     repeat: bool = False,
     preload: bool = False,
-    fps: float = None,
+    fps: Optional[float] = None,
     threading_enabled: bool = True,
-    stopped_event: Event = None
+    stopped_event: Optional[Event] = None
 ) -> Iterable[np.ndarray]:
     video_images: Iterable[np.ndarray]
     if preload:
@@ -307,15 +307,15 @@ def iter_read_video_images(
 @contextmanager
 def get_video_image_source(  # pylint: disable=too-many-locals
     path: str,
-    image_size: ImageSize = None,
+    image_size: Optional[ImageSize] = None,
     repeat: bool = False,
     preload: bool = False,
     download: bool = True,
-    fps: float = None,
-    fourcc: str = None,
-    buffer_size: int = None,
+    fps: Optional[float] = None,
+    fourcc: Optional[str] = None,
+    buffer_size: Optional[int] = None,
     threading_enabled: bool = True,
-    stopped_event: Event = None,
+    stopped_event: Optional[Event] = None,
     **_
 ) -> Iterator[Iterable[ImageArray]]:
     local_path = get_file(path, download=download)
@@ -367,7 +367,7 @@ def get_video_image_source(  # pylint: disable=too-many-locals
 
 def get_webcam_image_source(
     path: str,
-    fourcc: str = None,
+    fourcc: Optional[str] = None,
     buffer_size: int = 1,
     **kwargs
 ) -> ContextManager[Iterable[ImageArray]]:

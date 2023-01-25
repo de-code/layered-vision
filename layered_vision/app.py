@@ -80,8 +80,8 @@ class RuntimeContext:
         layer_by_id: Dict[str, 'RuntimeLayer'],
         timer: LoggingTimer,
         error_handler: ErrorHandler,
-        preferred_image_size: ImageSize = None,
-        application_stopped_event: Event = None
+        preferred_image_size: Optional[ImageSize] = None,
+        application_stopped_event: Optional[Event] = None
     ):
         self.layer_by_id = layer_by_id
         self.timer = timer
@@ -204,7 +204,7 @@ class RuntimeLayer:
         layer_config: ResolvedLayerConfig,
         layer_id: str,
         context: RuntimeContext,
-        source_layers: List['RuntimeLayer'] = None
+        source_layers: Optional[List['RuntimeLayer']] = None
     ):
         self.layer_index = layer_index
         self.layer_config = layer_config
@@ -453,9 +453,9 @@ class LayeredVisionApp:
     def __init__(
         self,
         config_path: str,
-        override_map: Dict[str, Dict[str, T_Value]] = None,
+        override_map: Optional[Dict[str, Dict[str, T_Value]]] = None,
         min_config_reload_secs: float = 1.0,
-        error_handler: ErrorHandler = None
+        error_handler: Optional[ErrorHandler] = None
     ):
         if error_handler is None:
             error_handler = DelegateErrorHandler()
@@ -605,7 +605,7 @@ class LayeredVisionApp:
         self.timer.on_frame_end()
         return True
 
-    def run(self, max_iterations: int = None):
+    def run(self, max_iterations: Optional[int] = None):
         try:
             self.timer.start()
             iteration = 0

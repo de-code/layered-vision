@@ -3,7 +3,7 @@ import logging
 import re
 import os
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = "3"
 
@@ -111,7 +111,7 @@ SUB_COMMAND_BY_NAME: Dict[str, SubCommand] = {
 }
 
 
-def parse_args(argv: List[str] = None) -> argparse.Namespace:
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
     subparsers.required = True
@@ -130,7 +130,7 @@ def run(args: argparse.Namespace):
     sub_command.run(args)
 
 
-def main(argv: List[str] = None):
+def main(argv: Optional[List[str]] = None):
     args = parse_args(argv)
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)

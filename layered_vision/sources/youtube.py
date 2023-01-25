@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import ContextManager, Iterable, List
+from typing import ContextManager, Iterable, List, Optional
 
 import youtube_dl
 
@@ -56,7 +56,7 @@ def get_pafy_video(url: str) -> pafy.backend_shared.BasePafy:
 def get_best_matching_video_stream(
     streams: List[pafy.backend_shared.BaseStream],
     preferred_type: str,
-    image_size: ImageSize = None
+    image_size: Optional[ImageSize] = None
 ) -> pafy.backend_shared.BaseStream:
     streams_with_dimensions_difference = []
     for stream in streams:
@@ -89,7 +89,7 @@ def get_best_matching_video_stream(
 def get_youtube_stream_url(
     url: str,
     preferred_type: str,
-    image_size: ImageSize = None
+    image_size: Optional[ImageSize] = None
 ) -> str:
     video = get_pafy_video(url)
     LOGGER.info('found video (%r): %r', url, video.title)
@@ -115,7 +115,7 @@ def get_youtube_stream_url(
 
 def get_youtube_video_image_source(
     path: str,
-    image_size: ImageSize = None,
+    image_size: Optional[ImageSize] = None,
     download: bool = False,
     preload: bool = False,
     buffer_size: int = 20,
