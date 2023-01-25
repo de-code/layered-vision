@@ -1,7 +1,7 @@
 import logging
 from contextlib import contextmanager
 from itertools import cycle
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, Optional
 
 import numpy as np
 
@@ -17,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 def get_fill_image_source(
     path: str,  # pylint: disable=unused-argument
     *args,
-    image_size: ImageSize = None,
+    image_size: Optional[ImageSize] = None,
     repeat: bool = False,
     color,
     **_

@@ -43,8 +43,8 @@ class SourceTypes:
 @contextmanager
 def get_simple_image_source(
     path: str,
-    image_size: ImageSize = None,
-    repeat: bool = None,
+    image_size: Optional[ImageSize] = None,
+    repeat: Optional[bool] = None,
     alpha: Optional[float] = None,
     **_
 ) -> Iterator[T_ImageSource]:

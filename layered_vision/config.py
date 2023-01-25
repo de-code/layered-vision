@@ -46,8 +46,8 @@ def get_typed(
     props: dict,
     key: str,
     value_type: Type[T],
-    default_value: T = None,
-    parse_fn: Callable[[str], T] = None
+    default_value: Optional[T] = None,
+    parse_fn: Optional[Callable[[str], T]] = None
 ) -> Optional[T]:
     value = props.get(key)
     if value is None and default_value is not None:
@@ -59,7 +59,7 @@ def get_typed(
     return value
 
 
-def get_bool(props, key: str, default_value: bool = None):
+def get_bool(props, key: str, default_value: Optional[bool] = None):
     return get_typed(props, key, bool, default_value, parse_bool)
 
 
@@ -67,34 +67,34 @@ class PropsConfig:
     def __init__(self, props: dict):
         self.props = props
 
-    def get(self, key: str, default_value: T = None) -> Optional[T]:
+    def get(self, key: str, default_value: Optional[T] = None) -> Optional[T]:
         return get(self.props, key, default_value)
 
     def get_typed(
         self,
         key: str,
         value_type: Type[T],
-        default_value: T = None,
-        parse_fn: Callable[[str], T] = None
+        default_value: Optional[T] = None,
+        parse_fn: Optional[Callable[[str], T]] = None
     ) -> Optional[T]:
         return get_typed(self.props, key, value_type, default_value, parse_fn)
 
-    def get_str(self, key: str, default_value: str = None):
+    def get_str(self, key: str, default_value: Optional[str] = None):
         return self.get_typed(key, str, default_value)
 
-    def get_bool(self, key: str, default_value: bool = None):
+    def get_bool(self, key: str, default_value: Optional[bool] = None):
         return self.get_typed(key, bool, default_value, parse_bool)
 
-    def get_int(self, key: str, default_value: int = None):
+    def get_int(self, key: str, default_value: Optional[int] = None):
         return self.get_typed(key, int, default_value)
 
-    def get_float(self, key: str, default_value: float = None):
+    def get_float(self, key: str, default_value: Optional[float] = None):
         return self.get_typed(key, float, default_value)
 
-    def get_str_list(self, key: str, default_value: str = None):
+    def get_str_list(self, key: str, default_value: Optional[str] = None):
         return self.get_typed(key, list, default_value, parse_str_list)
 
-    def get_dict(self, key: str, default_value: dict = None) -> Optional[dict]:
+    def get_dict(self, key: str, default_value: Optional[dict] = None) -> Optional[dict]:
         result = self.get(key, default_value=default_value)
         if result is None:
             return None
@@ -104,7 +104,7 @@ class PropsConfig:
             )
         return result
 
-    def get_list(self, key: str, default_value: list = None) -> Optional[list]:
+    def get_list(self, key: str, default_value: Optional[list] = None) -> Optional[list]:
         result = self.get(key, default_value=default_value)
         if result is None:
             return None
